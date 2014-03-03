@@ -4,6 +4,7 @@ import packet "kendynet-go/packet"
 import "fmt"
 
 func main(){
+	
 	wpk := packet.NewWpacket(packet.NewByteBuffer(64))
 	wpk.PutUint32(100)
 	wpk.PutUint32(101)
@@ -20,7 +21,6 @@ func main(){
 
 	str,_ := rpk.String()
 	fmt.Printf("%s\n",str)
-
 }
 
 /*

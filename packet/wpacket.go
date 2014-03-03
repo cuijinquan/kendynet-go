@@ -1,25 +1,25 @@
 package packet
 
-type wpacket struct{
+type Wpacket struct{
 	writeidx uint32
-	buffer *bytebuffer
+	buffer *ByteBuffer
 }
 
-func NewWpacket(buffer *bytebuffer)(*wpacket){
+func NewWpacket(buffer *ByteBuffer)(*Wpacket){
 	if buffer == nil {
 		return nil
 	}
 	buffer.PutUint32(0,0)
-	return &wpacket{writeidx:4,buffer:buffer}
+	return &Wpacket{writeidx:4,buffer:buffer}
 }
 
 
-func (this *wpacket)Buffer()(*bytebuffer){
+func (this *Wpacket)Buffer()(*ByteBuffer){
 	return this.buffer
 }
 
 
-func (this *wpacket)PutUint16(value uint16)(error){
+func (this *Wpacket)PutUint16(value uint16)(error){
 	if this.buffer == nil {
 		return ErrInvaildData
 	}
@@ -37,7 +37,7 @@ func (this *wpacket)PutUint16(value uint16)(error){
 	return nil
 }
 
-func (this *wpacket)PutUint32(value uint32)(error){
+func (this *Wpacket)PutUint32(value uint32)(error){
 	if this.buffer == nil {
 		return ErrInvaildData
 	}
@@ -55,7 +55,7 @@ func (this *wpacket)PutUint32(value uint32)(error){
 	return nil
 }
 
-func (this *wpacket)PutString(value string)(error){
+func (this *Wpacket)PutString(value string)(error){
 	if this.buffer == nil {
 		return ErrInvaildData
 	}
@@ -73,7 +73,7 @@ func (this *wpacket)PutString(value string)(error){
 	return nil
 }
 
-func (this *wpacket)PutBinary(value []byte)(error){
+func (this *Wpacket)PutBinary(value []byte)(error){
 	if this.buffer == nil {
 		return ErrInvaildData
 	}
