@@ -3,7 +3,7 @@ package packet
 import (
 	"encoding/binary"
 	"fmt"
-	"unsafe"
+	//"unsafe"
 )
 func IsPow2(size uint32) bool{
 	return (size&(size-1)) == 0
@@ -113,39 +113,38 @@ func (this *ByteBuffer)buffer_check(idx,size uint32)(error){
 }
 
 func (this *ByteBuffer)PutByte(idx uint32,value byte)(error){
-	err := this.buffer_check(idx,(uint32)(unsafe.Sizeof(value)))
+	err := this.buffer_check(idx,1)
 	if err != nil {
 		return err
 	}
 	this.buffer[idx] = value
-	this.len += (uint64)(unsafe.Sizeof(value))
+	this.len += 1
 	return nil
 }
 
 func (this *ByteBuffer)PutUint16(idx uint32,value uint16)(error){
-	err := this.buffer_check(idx,(uint32)(unsafe.Sizeof(value)))
+	err := this.buffer_check(idx,2)
 	if err != nil {
 		return err
 	}
-	binary.LittleEndian.PutUint16(this.buffer[idx:idx+(uint32)(unsafe.Sizeof(value))],value)
-	this.len += (uint64)(unsafe.Sizeof(value))
+	binary.LittleEndian.PutUint16(this.buffer[idx:idx+2],value)
+	this.len += 2
 	return nil
 }
 
 func (this *ByteBuffer)PutUint32(idx uint32,value uint32)(error){
-	err := this.buffer_check(idx,(uint32)(unsafe.Sizeof(value)))
+	err := this.buffer_check(idx,4)//(uint32)(unsafe.Sizeof(value)))
 	if err != nil {
 		return err
 	}
-	binary.LittleEndian.PutUint32(this.buffer[idx:idx+(uint32)(unsafe.Sizeof(value))],value)
-	this.len += (uint64)(unsafe.Sizeof(value))
+	binary.LittleEndian.PutUint32(this.buffer[idx:idx+4],value)
+	this.len += 4
 	return nil
 }
 
 
 func (this *ByteBuffer)PutString(idx uint32,value string)(error){
-	var sizeneed uint32
-	sizeneed = (uint32)(unsafe.Sizeof(Max_string_len))
+	sizeneed := (uint32)(4)
 	sizeneed += (uint32)(len(value)+1)
 	err := this.buffer_check(idx,sizeneed)
 	if err != nil {
@@ -154,7 +153,7 @@ func (this *ByteBuffer)PutString(idx uint32,value string)(error){
 
 	//first put string len
 	this.PutUint32(idx,(uint32)(len(value)+1))
-	idx += (uint32)(unsafe.Sizeof(Max_string_len))
+	idx += 4
 	//second put string
 	copy(this.buffer[idx:],value[:len(value)])
 	this.len += (uint64)(len(value)+1)
@@ -162,8 +161,7 @@ func (this *ByteBuffer)PutString(idx uint32,value string)(error){
 }
 
 func (this *ByteBuffer)PutBinary(idx uint32,value []byte)(error){
-	var sizeneed uint32
-	sizeneed = (uint32)(unsafe.Sizeof(Max_bin_len))
+	sizeneed := (uint32)(4)
 	sizeneed += (uint32)(len(value))
 	err := this.buffer_check(idx,sizeneed)
 	if err != nil {
@@ -172,7 +170,7 @@ func (this *ByteBuffer)PutBinary(idx uint32,value []byte)(error){
 
 	//first put bin len
 	this.PutUint32(idx,(uint32)(len(value)))
-	idx += (uint32)(unsafe.Sizeof(Max_bin_len))
+	idx += 4
 	//second put bin
 	copy(this.buffer[idx:],value[:len(value)])
 	this.len += (uint64)(len(value))
@@ -180,35 +178,35 @@ func (this *ByteBuffer)PutBinary(idx uint32,value []byte)(error){
 }
 
 func (this *ByteBuffer)Uint16(idx uint32)(ret uint16,err error){
-	if (uint64)(idx + (uint32)(unsafe.Sizeof(ret))) > this.len {
+	if (uint64)(idx + 2) > this.len {
 		ret = 0
 		err = ErrInvaildData
 		return
 	}
-	ret = binary.LittleEndian.Uint16(this.buffer[idx:idx+(uint32)(unsafe.Sizeof(ret))])
+	ret = binary.LittleEndian.Uint16(this.buffer[idx:idx+2])
 	err = nil
 	return
 }
 
 func (this *ByteBuffer)Uint32(idx uint32)(ret uint32,err error){
-	if (uint64)(idx + (uint32)(unsafe.Sizeof(ret))) > this.len {
+	if (uint64)(idx + 4) > this.len {
 		ret = 0
 		err = ErrInvaildData
 		return
 	}
-	ret = binary.LittleEndian.Uint32(this.buffer[idx:idx+(uint32)(unsafe.Sizeof(ret))])
+	ret = binary.LittleEndian.Uint32(this.buffer[idx:idx+4])
 	err = nil
 	return
 }
 
 func (this *ByteBuffer)String(idx uint32)(ret string,err error){
-	if (uint64)(idx + (uint32)(unsafe.Sizeof(Max_string_len))) > this.len {
+	if (uint64)(idx + 4) > this.len {
 		err = ErrInvaildData
 		return
 	}
 	//read string len
 	str_len,_ := this.Uint32(idx)
-	idx += (uint32)(unsafe.Sizeof(Max_string_len))
+	idx += 4
 	if (uint64)(idx + str_len) > this.len {
 		err = ErrInvaildData
 		return
@@ -220,13 +218,13 @@ func (this *ByteBuffer)String(idx uint32)(ret string,err error){
 
 
 func (this *ByteBuffer)Binary(idx uint32)(ret []byte,err error){
-	if (uint64)(idx + (uint32)(unsafe.Sizeof(Max_bin_len))) > this.len {
+	if (uint64)(idx + 4) > this.len {
 		err = ErrInvaildData
 		return
 	}
 	//read bin len
 	bin_len,_ := this.Uint32(idx)
-	idx += (uint32)(unsafe.Sizeof(Max_bin_len))
+	idx += 4
 	if (uint64)(idx + bin_len) > this.len {
 		err = ErrInvaildData
 		return
