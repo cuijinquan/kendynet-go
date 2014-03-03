@@ -1,9 +1,11 @@
 package tcpsession
 
-import "net"
-import packet "kendynet-go/packet"
-import "encoding/binary"
-import "fmt"
+import(
+	   "net"
+	   packet "kendynet-go/packet"
+	   "encoding/binary"
+	   "fmt"
+   )
 
 var (
 	ErrUnPackError     = fmt.Errorf("TcpSession: UnpackError")
