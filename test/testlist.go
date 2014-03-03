@@ -1,29 +1,10 @@
 package main
 
-import packet "kendynet/packet"
+import util "kendynet-go/util"
 import "fmt"
+import "encoding/binary"
+import "unsafe"
 
-func main(){
-	wpk := packet.NewWpacket(packet.NewByteBuffer(64))
-	wpk.PutUint32(100)
-	wpk.PutUint32(101)
-	wpk.PutUint32(102)
-	wpk.PutString("hello")
-
-	rpk := packet.NewRpacket(wpk.Buffer())
-	value,_ := rpk.Uint32()
-	fmt.Printf("%d\n",value)
-	value,_ = rpk.Uint32()
-	fmt.Printf("%d\n",value)
-	value,_ = rpk.Uint32()
-	fmt.Printf("%d\n",value)
-
-	str,_ := rpk.String()
-	fmt.Printf("%s\n",str)
-
-}
-
-/*
 type Node struct{
 	util.ListNode
 	Value int32
@@ -55,7 +36,7 @@ func main(){
 	fmt.Printf("%d\n",binary.LittleEndian.Uint32(buffer[rpos:rpos+4]))
 	rpos += 4
 
-}*/
+}
 
 
 
