@@ -2,7 +2,6 @@ package main
 
 import util "kendynet-go/util"
 import "fmt"
-import "encoding/binary"
 import "unsafe"
 
 type Node struct{
@@ -20,21 +19,17 @@ func Cast2Node(n *util.ListNode)(*Node){
 
 
 func main(){
+	list := util.NewList()
 
-	wpos := 0
-	rpos := 0
+	list.Push((&Node{Value:100}).Cast2ListNode())
+	list.Push((&Node{Value:101}).Cast2ListNode())
 
-	buffer := make([]byte,100)
-	binary.LittleEndian.PutUint32(buffer[wpos:wpos+4], uint32(100))
-	wpos += 4
-	binary.LittleEndian.PutUint32(buffer[wpos:wpos+4], uint32(101))
-	wpos += 4
+	fmt.Printf("%d\n",list.Len())
 
-	fmt.Printf("%d\n",binary.LittleEndian.Uint32(buffer[rpos:rpos+4]))
-	rpos += 4
+	fmt.Printf("%d\n",Cast2Node(list.Pop()).Value)
+	fmt.Printf("%d\n",Cast2Node(list.Pop()).Value)
 
-	fmt.Printf("%d\n",binary.LittleEndian.Uint32(buffer[rpos:rpos+4]))
-	rpos += 4
+	fmt.Printf("%d\n",list.Len())
 
 }
 
