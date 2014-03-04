@@ -1,10 +1,11 @@
 package main
 
-import "net"
-import tcpsession "kendynet-go/tcpsession"
-import packet "kendynet-go/packet"
-import "fmt"
-
+import(
+	"net"
+	tcpsession "kendynet-go/tcpsession"
+	packet "kendynet-go/packet"
+	"fmt"
+)
 
 func send_finish (s interface{},wpk *packet.Wpacket){
 	session := s.(*tcpsession.Tcpsession)
