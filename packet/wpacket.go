@@ -4,6 +4,7 @@ type Wpacket struct{
 	writeidx uint32
 	buffer *ByteBuffer
 	raw bool
+	Fn_sendfinish func(interface{},*Wpacket)
 }
 
 func NewWpacket(buffer *ByteBuffer,raw bool)(*Wpacket){

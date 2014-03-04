@@ -5,8 +5,14 @@ import tcpsession "kendynet-go/tcpsession"
 import packet "kendynet-go/packet"
 import "fmt"
 
+
+func send_finish (s interface{},wpk *packet.Wpacket){
+	session := s.(*tcpsession.Tcpsession)
+	session.Close()
+}
+
 func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
-	session.Send(packet.NewWpacket(rpk.Buffer(),rpk.IsRaw()))
+	session.Send(packet.NewWpacket(rpk.Buffer(),rpk.IsRaw()),send_finish)
 }
 
 func session_close(session *tcpsession.Tcpsession){

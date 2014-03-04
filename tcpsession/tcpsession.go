@@ -107,6 +107,9 @@ func dosend(sender *tcpsender){
 			sender.Session.send_close = true
 			return
 		}
+		if wpk.Fn_sendfinish != nil{
+			wpk.Fn_sendfinish(sender.Session,wpk)
+		}
 	}
 }
 
@@ -146,10 +149,14 @@ func NewTcpSession(conn net.Conn,raw bool)(*Tcpsession){
 	return session
 }
 
-func (this *Tcpsession)Send(wpk *packet.Wpacket)(error){
+func (this *Tcpsession)Send(wpk *packet.Wpacket,send_finish func(interface{},*packet.Wpacket))(error){
 	if !this.send_close{
+		wpk.Fn_sendfinish = send_finish
 		this.Send_que <- wpk
 	}
 	return nil
 }
 
+func (this *Tcpsession)Close(){
+	this.Conn.Close()
+}
