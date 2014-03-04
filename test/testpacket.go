@@ -5,13 +5,13 @@ import "fmt"
 
 func main(){
 	
-	wpk := packet.NewWpacket(packet.NewByteBuffer(64))
+	wpk := packet.NewWpacket(packet.NewByteBuffer(64),false)
 	wpk.PutUint32(100)
 	wpk.PutUint32(101)
 	wpk.PutUint32(102)
 	wpk.PutString("hello")
 
-	rpk := packet.NewRpacket(wpk.Buffer())
+	rpk := packet.NewRpacket(wpk.Buffer(),false)
 	value,_ := rpk.Uint32()
 	fmt.Printf("%d\n",value)
 	value,_ = rpk.Uint32()

@@ -13,10 +13,15 @@ var (
 
 type Tcpsession struct{
 	Conn net.Conn
-	Packet_que chan *packet.Rpacket
+	Packet_que chan interface{}
 	Send_que chan *packet.Wpacket
+	raw bool
+	send_close bool
 }
 
+func (this *Tcpsession) IsRaw()(bool){
+	return this.raw
+}
 
 type tcprecver struct{
 	Session *Tcpsession
@@ -27,7 +32,7 @@ type tcpsender struct{
 }
 
 
-func unpack(begidx uint32,buffer []byte,packet_que chan *packet.Rpacket)(int,error){
+func unpack(begidx uint32,buffer []byte,packet_que chan interface{})(int,error){
 	unpack_size := 0
 	for{
 		packet_size :=	binary.LittleEndian.Uint32(buffer[begidx:begidx+4])
@@ -35,7 +40,7 @@ func unpack(begidx uint32,buffer []byte,packet_que chan *packet.Rpacket)(int,err
 			return 0,ErrUnPackError
 		}
 		if packet_size+4 <= (uint32)(len(buffer)){
-			rpk := packet.NewRpacket(packet.NewBufferByBytes(buffer[begidx:(begidx+packet_size+4)]))
+			rpk := packet.NewRpacket(packet.NewBufferByBytes(buffer[begidx:(begidx+packet_size+4)]),false)
 			packet_que <- rpk
 			begidx += packet_size+4
 			unpack_size += (int)(packet_size)+4
@@ -54,7 +59,7 @@ func dorecv(recver *tcprecver){
 	for{
 		n,err := recver.Session.Conn.Read(recvbuf)
 		if err != nil {
-			close(recver.Session.Packet_que)
+			recver.Session.Packet_que <- "rclose"
 			return
 		}
 		//copy to unpackbuf
@@ -78,6 +83,19 @@ func dorecv(recver *tcprecver){
 	}
 }
 
+func dorecv_raw(recver *tcprecver){
+	for{
+		recvbuf := make([]byte,packet.Max_bufsize)
+		_,err := recver.Session.Conn.Read(recvbuf)
+		if err != nil {
+			recver.Session.Packet_que <- "rclose"
+			return
+		}
+		rpk := packet.NewRpacket(packet.NewBufferByBytes(recvbuf),true)
+		recver.Session.Packet_que <- rpk
+	}
+}
+
 func dosend(sender *tcpsender){
 	for{
 		wpk,ok :=  <-sender.Session.Send_que
@@ -86,25 +104,52 @@ func dosend(sender *tcpsender){
 		}
 		_,err := sender.Session.Conn.Write(wpk.Buffer().Bytes())
 		if err != nil {
-			close(sender.Session.Packet_que)
+			sender.Session.send_close = true
 			return
 		}
-
 	}
 }
 
-func NewTcpSession(conn net.Conn)(*Tcpsession){
-	session := &Tcpsession{Conn:conn,Packet_que:make(chan *packet.Rpacket,1024),Send_que:make(chan *packet.Wpacket,1024)}
-	go dorecv(&tcprecver{Session:session})
+
+func ProcessSession(tcpsession *Tcpsession,process_packet func (*Tcpsession,*packet.Rpacket),session_close func (*Tcpsession)){
+	for{
+		msg,ok := <- tcpsession.Packet_que
+		if !ok {
+			fmt.Printf("client disconnect\n")
+			return
+		}
+		switch msg.(type){
+			case * packet.Rpacket:
+				rpk := msg.(*packet.Rpacket)
+				process_packet(tcpsession,rpk)
+			case string:
+				str := msg.(string)
+				if str == "rclose"{
+					session_close(tcpsession)
+					close(tcpsession.Packet_que)
+					close(tcpsession.Send_que)
+					tcpsession.Conn.Close()
+					return
+				}
+		}
+	}
+}
+
+func NewTcpSession(conn net.Conn,raw bool)(*Tcpsession){
+	session := &Tcpsession{Conn:conn,Packet_que:make(chan interface{},1024),Send_que:make(chan *packet.Wpacket,1024),raw:raw,send_close:false}
+	if raw{
+		go dorecv_raw(&tcprecver{Session:session})
+	}else{
+		go dorecv(&tcprecver{Session:session})
+	}
 	go dosend(&tcpsender{Session:session})
 	return session
 }
 
 func (this *Tcpsession)Send(wpk *packet.Wpacket)(error){
-	this.Send_que <- wpk
+	if !this.send_close{
+		this.Send_que <- wpk
+	}
 	return nil
 }
 
-func (this *Tcpsession)Process(){
-
-}

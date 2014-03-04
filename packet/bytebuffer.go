@@ -34,9 +34,9 @@ func GetPow2(size uint32) uint32{
 	return pow2
 }
 const (
-	Max_bufsize  uint32 = 65536
-	Max_string_len  uint32 = 65536
-	Max_bin_len  uint32 = 65536
+	Max_bufsize  uint32 = 32000 
+	Max_string_len  uint32 = 32000
+	Max_bin_len  uint32 = 32000
 )
 
 type ByteBuffer struct {
