@@ -17,6 +17,7 @@ const (
 type transfer_session struct{
 	filecontent []byte
 	widx        int
+	filename    string
 }
 
 func (this *transfer_session)recv_file(rpk *packet.Rpacket)(bool){
@@ -24,7 +25,7 @@ func (this *transfer_session)recv_file(rpk *packet.Rpacket)(bool){
 	copy(content[:],this.filecontent[this.widx:])
 	this.widx += len(content)
 	if this.widx >= len(this.filecontent) {
-		ioutil.WriteFile("learnyouhaskell1.pdf", this.filecontent, 0x644)
+		ioutil.WriteFile(this.filename, this.filecontent, 0x644)
 		return true
 	}
 	return false
@@ -32,13 +33,16 @@ func (this *transfer_session)recv_file(rpk *packet.Rpacket)(bool){
 
 func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
 	cmd,_ := rpk.Uint16()
-	if cmd == file_size{
-		if session.Ud() != nil {
+	if cmd == file_size {
+		if session.Ud() == nil {
 			session.Close()
 			return
 		}
-		tsession := &transfer_session{filecontent:make([]byte,file_size),widx:0}
-		session.SetUd(tsession)	
+		tsession := session.Ud().(transfer_session)
+		filesize,_ := rpk.Uint32()
+		tsession.widx = 0
+		tsession.filecontent = make([]byte,filesize)
+		
 	}else if cmd == transfering {
 		if session.Ud() == nil {
 			session.Close()
@@ -76,6 +80,8 @@ func main(){
 		wpk.PutUint16(request_file)
 		wpk.PutString("learnyouhaskell.pdf")
 		session.Send(wpk,nil)
+		tsession := &transfer_session{filename:"learnyouhaskell.pdf"}
+		session.SetUd(tsession)	
 		tcpsession.ProcessSession(session,process_client,session_close)
 	}
 }
