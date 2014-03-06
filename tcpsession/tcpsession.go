@@ -17,10 +17,19 @@ type Tcpsession struct{
 	Send_que chan *packet.Wpacket
 	raw bool
 	send_close bool
+	ud interface{}
 }
 
 func (this *Tcpsession) IsRaw()(bool){
 	return this.raw
+}
+
+func (this *Tcpsession) SetUd(ud interface{}){
+	this.ud = ud
+}
+
+func (this *Tcpsession) Ud()(interface{}){
+	return this.ud
 }
 
 func unpack(begidx uint32,buffer []byte,packet_que chan interface{})(int,error){
