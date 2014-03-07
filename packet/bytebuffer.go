@@ -145,19 +145,19 @@ func (this *ByteBuffer)PutUint32(idx uint32,value uint32)(error){
 
 func (this *ByteBuffer)PutString(idx uint32,value string)(error){
 	sizeneed := (uint32)(4)
-	sizeneed += (uint32)(len(value)+1)
+	sizeneed += (uint32)(len(value))
 	err := this.buffer_check(idx,sizeneed)
 	if err != nil {
 		return err
 	}
 
 	//first put string len
-	this.PutUint32(idx,(uint32)(len(value)+1))
+	this.PutUint32(idx,(uint32)(len(value)))
 	
 	idx += 4
 	//second put string
 	copy(this.buffer[idx:],value[:len(value)])
-	this.len += (uint64)(len(value)+1)
+	this.len += (uint64)(len(value))
 	return nil
 }
 

@@ -74,7 +74,7 @@ func (this *Rpacket) String()(string,error){
 	if err != nil {
 		return "",err
 	}
-	this.readidx += (4 + (uint32)(len(value)) + 1)
+	this.readidx += (4 + (uint32)(len(value)))
 	return value,nil
 
 }

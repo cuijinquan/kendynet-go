@@ -2,17 +2,31 @@ package main
 
 import packet "kendynet-go/packet"
 import "fmt"
-import "encoding/binary"
+//import "encoding/binary"
 
 func main(){
 	
 	wpk := packet.NewWpacket(packet.NewByteBuffer(64),false)
-	wpk.PutUint16(1)
-	wpk.PutString("learnyouhaskell.pdf")
+	wpk.PutString("中国")
+	wpk.PutUint32(100)
+	wpk.PutString("韶关")
+	rpk := packet.NewRpacket(wpk.Buffer(),false)
+	str,_ := rpk.String()
+	fmt.Printf("%s\n",str)
 	
-	fmt.Printf("buf len %d\n",uint32(wpk.Buffer().Len()))
-	packet_size :=	binary.LittleEndian.Uint32(wpk.Buffer().Bytes()[0:4])
-	fmt.Printf("packet_size : %d\n",packet_size)
+	v,_ := rpk.Uint32()
+	fmt.Printf("%d\n",v)
+	
+	str,_ = rpk.String()
+	fmt.Printf("%s\n",str)
+	if str != "韶关" {
+		fmt.Printf("bad\n")
+	}
+	
+	
+	//fmt.Printf("buf len %d\n",uint32(wpk.Buffer().Len()))
+	//packet_size :=	binary.LittleEndian.Uint32(wpk.Buffer().Bytes()[0:4])
+	//fmt.Printf("packet_size : %d\n",packet_size)
 	
 /*
 	rpk := packet.NewRpacket(wpk.Buffer(),false)

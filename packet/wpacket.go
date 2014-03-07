@@ -88,8 +88,8 @@ func (this *Wpacket)PutString(value string)(error){
 	if err != nil{
 		return err
 	}
-	size += (4+(uint32)(len(value))+1)
-	this.writeidx += (4+(uint32)(len(value))+1)
+	size += (4+(uint32)(len(value)))
+	this.writeidx += (4+(uint32)(len(value)))
 	binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
 	return nil
 }

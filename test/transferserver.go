@@ -100,18 +100,8 @@ func loadfile(){
 	if err != nil {
 		fmt.Printf("learnyouhaskell.pdf load error\n")
 	}else
-	{
-		wpk := packet.NewWpacket(packet.NewByteBuffer(64),false)
-		wpk.PutString("learnyouhaskell.pdf")
-		rpk := packet.NewRpacket(wpk.Buffer(),false)	
-		
-		fname,_ := rpk.String()		
-		
-		filemap[fname] = buf
-		
-		if filemap[fname] == nil {
-			fmt.Printf("loadfile error\n")	
-		}
+	{	
+		filemap["learnyouhaskell.pdf"] = buf
 	}
 	fmt.Printf("loadfile finish\n")	
 }
