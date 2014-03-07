@@ -1,5 +1,8 @@
 package packet
-
+import (
+	"encoding/binary"
+	)
+	
 type Wpacket struct{
 	writeidx uint32
 	buffer *ByteBuffer
@@ -45,7 +48,7 @@ func (this *Wpacket)PutUint16(value uint16)(error){
 	}
 	size += 2
 	this.writeidx += 2
-	this.buffer.PutUint32(0,size)
+	binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
 	return nil
 }
 
@@ -66,7 +69,7 @@ func (this *Wpacket)PutUint32(value uint32)(error){
 	}
 	size += 4
 	this.writeidx += 4
-	this.buffer.PutUint32(0,size)
+	binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
 	return nil
 }
 
@@ -87,7 +90,7 @@ func (this *Wpacket)PutString(value string)(error){
 	}
 	size += (4+(uint32)(len(value))+1)
 	this.writeidx += (4+(uint32)(len(value))+1)
-	this.buffer.PutUint32(0,size)
+	binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
 	return nil
 }
 
@@ -115,7 +118,7 @@ func (this *Wpacket)PutBinary(value []byte)(error){
 		}
 		size += (4+(uint32)(len(value)))
 		this.writeidx += (4+(uint32)(len(value)))
-		this.buffer.PutUint32(0,size)
+		binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
 	}
 	return nil
 }

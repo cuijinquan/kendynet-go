@@ -5,6 +5,7 @@ import(
 	   packet "kendynet-go/packet"
 	   "encoding/binary"
 	   "fmt"
+	   "io"
    )
 
 var (
@@ -32,54 +33,37 @@ func (this *Tcpsession) Ud()(interface{}){
 	return this.ud
 }
 
-func unpack(begidx uint32,buffer []byte,packet_que chan interface{})(int,error){
-	unpack_size := 0
+func dorecv(session *Tcpsession){
 	for{
-		packet_size :=	binary.LittleEndian.Uint32(buffer[begidx:begidx+4])
-		if packet_size > packet.Max_bufsize-4 {
-			return 0,ErrUnPackError
-		}
-		if packet_size+4 <= (uint32)(len(buffer)){
-			rpk := packet.NewRpacket(packet.NewBufferByBytes(buffer[begidx:(begidx+packet_size+4)]),false)
-			packet_que <- rpk
-			begidx += packet_size+4
-			unpack_size += (int)(packet_size)+4
-		}else{
+		header := make([]byte,4)
+		n, err := io.ReadFull(session.Conn, header)
+		if n == 0 && err == io.EOF {
+			close(session.Packet_que)
+			break
+		}else if err != nil {
+			close(session.Packet_que)
 			break
 		}
-	}
-	return unpack_size,nil
-}
-
-
-func dorecv(session *Tcpsession){
-	recvbuf := make([]byte,packet.Max_bufsize)
-	unpackbuf := make([]byte,packet.Max_bufsize*2)
-	unpack_idx := 0
-	for{
-		n,err := session.Conn.Read(recvbuf)
-		if err != nil {
-			session.Packet_que <- "rclose"
-			return
-		}
-		//copy to unpackbuf
-		copy(unpackbuf[len(unpackbuf):],recvbuf[:n])
-		//unpack
-		n,err = unpack((uint32)(unpack_idx),unpackbuf,session.Packet_que)
-		if err != nil {
+		size := binary.LittleEndian.Uint32(header)
+		if size > packet.Max_bufsize {
 			close(session.Packet_que)
-			return
+			break
 		}
-		unpack_idx += n
-		if cap(unpackbuf) - len(unpackbuf) < (int)(packet.Max_bufsize) {
-			tmpbuf := make([]byte,packet.Max_bufsize*2)
-			n = len(unpackbuf) - unpack_idx
-			if n > 0 {
-				copy(tmpbuf[0:],unpackbuf[unpack_idx:unpack_idx+n])
-			}
-			unpackbuf = tmpbuf
-			unpack_idx = 0
+		
+		body := make([]byte,size)
+		n, err = io.ReadFull(session.Conn, body)
+		if n == 0 && err == io.EOF {
+			close(session.Packet_que)
+			break
+		}else if err != nil {
+			close(session.Packet_que)
+			break
 		}
+		pkbuf := make([]byte,size+4)
+		copy(pkbuf[:],header[:])
+		copy(pkbuf[4:],body[:])
+		rpk := packet.NewRpacket(packet.NewBufferByBytes(pkbuf),false)
+		session.Packet_que <- rpk		
 	}
 }
 
@@ -102,7 +86,7 @@ func dosend(session *Tcpsession){
 		if !ok {
 			return
 		}
-		_,err := session.Conn.Write(wpk.Buffer().Bytes())
+		_,err := session.Conn.Write(wpk.Buffer().Bytes()[0:wpk.Buffer().Len()])
 		if err != nil {
 			session.send_close = true
 			return

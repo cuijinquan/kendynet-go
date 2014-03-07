@@ -48,10 +48,13 @@ func (this *transfer_session)check_finish()(bool){
 
 
 func send_finish (s interface{},wpk *packet.Wpacket){
+	fmt.Printf("send_finish\n")
 	session := s.(*tcpsession.Tcpsession)
-	tsession := session.Ud().(transfer_session)
+	//session.Close()
+	tsession := session.Ud().(*transfer_session)
 	if tsession.check_finish(){
-		session.Close()
+		fmt.Printf("send finish\n")
+		//session.Close()
 		return
 	}
 	tsession.send_file(session)
@@ -70,6 +73,7 @@ func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
 				fmt.Printf("%s not found\n",filename)
 				session.Close()
 			}else{
+				fmt.Printf("request file %s\n",filename)
 				tsession := &transfer_session{filecontent:filecontent,ridx:0}
 				session.SetUd(tsession)
 				
@@ -81,7 +85,7 @@ func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
 			}	
 		}
 	}else{
-		fmt.Printf("cmd error\n")
+		fmt.Printf("cmd error,%d\n",cmd)
 		session.Close()
 	}
 }
@@ -91,13 +95,25 @@ func session_close(session *tcpsession.Tcpsession){
 }
 
 func loadfile(){
+	filemap = make(map[string][]byte)
 	buf, err := ioutil.ReadFile("learnyouhaskell.pdf")
 	if err != nil {
 		fmt.Printf("learnyouhaskell.pdf load error\n")
 	}else
 	{
-		filemap["learnyouhaskell.pdf"] = buf
-	}	
+		wpk := packet.NewWpacket(packet.NewByteBuffer(64),false)
+		wpk.PutString("learnyouhaskell.pdf")
+		rpk := packet.NewRpacket(wpk.Buffer(),false)	
+		
+		fname,_ := rpk.String()		
+		
+		filemap[fname] = buf
+		
+		if filemap[fname] == nil {
+			fmt.Printf("loadfile error\n")	
+		}
+	}
+	fmt.Printf("loadfile finish\n")	
 }
 
 func main(){
@@ -110,9 +126,7 @@ func main(){
 	if err != nil{
 		fmt.Printf("ListenTCP")
 	}
-	
-	filemap = make(map[string][]byte)
-	
+	loadfile()
 	for {
 		conn, err := listener.Accept()
 		if err != nil {

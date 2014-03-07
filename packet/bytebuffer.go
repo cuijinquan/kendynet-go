@@ -153,6 +153,7 @@ func (this *ByteBuffer)PutString(idx uint32,value string)(error){
 
 	//first put string len
 	this.PutUint32(idx,(uint32)(len(value)+1))
+	
 	idx += 4
 	//second put string
 	copy(this.buffer[idx:],value[:len(value)])
@@ -173,6 +174,18 @@ func (this *ByteBuffer)PutBinary(idx uint32,value []byte)(error){
 	idx += 4
 	//second put bin
 	copy(this.buffer[idx:],value[:len(value)])
+	this.len += (uint64)(len(value))
+	return nil
+}
+
+func (this *ByteBuffer)PutRawBinary(value []byte)(error){
+	sizeneed := (uint32)(len(value))
+	err := this.buffer_check(uint32(this.len),sizeneed)
+	if err != nil {
+		return err
+	}
+	//second put bin
+	copy(this.buffer[this.len:],value[:len(value)])
 	this.len += (uint64)(len(value))
 	return nil
 }

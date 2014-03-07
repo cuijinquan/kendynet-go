@@ -18,14 +18,15 @@ type transfer_session struct{
 	filecontent []byte
 	widx        int
 	filename    string
+	filesize    int
 }
 
 func (this *transfer_session)recv_file(rpk *packet.Rpacket)(bool){
 	content,_ := rpk.Binary()
-	copy(content[:],this.filecontent[this.widx:])
+	copy(this.filecontent[this.widx:],content[:])
 	this.widx += len(content)
-	if this.widx >= len(this.filecontent) {
-		ioutil.WriteFile(this.filename, this.filecontent, 0x644)
+	if this.widx >= this.filesize {
+		ioutil.WriteFile(this.filename, this.filecontent, 0x777)
 		return true
 	}
 	return false
@@ -35,25 +36,33 @@ func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
 	cmd,_ := rpk.Uint16()
 	if cmd == file_size {
 		if session.Ud() == nil {
+			fmt.Printf("error\n")
 			session.Close()
 			return
 		}
-		tsession := session.Ud().(transfer_session)
+		tsession := session.Ud().(*transfer_session)
 		filesize,_ := rpk.Uint32()
+		fmt.Printf("file size:%d\n",filesize)
 		tsession.widx = 0
+		tsession.filesize = int(filesize)
 		tsession.filecontent = make([]byte,filesize)
 		
 	}else if cmd == transfering {
 		if session.Ud() == nil {
+			fmt.Printf("close here\n")
 			session.Close()
 			return
 		}
-		tsession := session.Ud().(transfer_session)
+		tsession := session.Ud().(*transfer_session)
 		if tsession.recv_file(rpk) {
 			//传输完毕
+			fmt.Printf("transfer finish\n")
 			session.Close()
 			return
 		}
+	}else{
+		fmt.Printf("cmd error,%d\n",cmd)
+		//session.Close()
 	}
 }
 
@@ -73,14 +82,14 @@ func main(){
 	if err != nil {
 		fmt.Printf("DialTcp error\n")
 	}else{
-		session := tcpsession.NewTcpSession(conn,true)
+		session := tcpsession.NewTcpSession(conn,false)
 		fmt.Printf("connect sucessful\n")
 		//发出文件请求
 		wpk := packet.NewWpacket(packet.NewByteBuffer(64),false)
 		wpk.PutUint16(request_file)
 		wpk.PutString("learnyouhaskell.pdf")
 		session.Send(wpk,nil)
-		tsession := &transfer_session{filename:"learnyouhaskell.pdf"}
+		tsession := &transfer_session{filename:"learnyouhaskell1.pdf"}
 		session.SetUd(tsession)	
 		tcpsession.ProcessSession(session,process_client,session_close)
 	}
