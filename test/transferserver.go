@@ -10,8 +10,11 @@ import(
 	tcpsession "kendynet-go/tcpsession"
 	packet "kendynet-go/packet"
 	"fmt"
-	//"os"
+	"strings"
+	"os"
 	"io/ioutil"
+	"bufio"
+	"io"
 )
 
 const (
@@ -52,13 +55,10 @@ func (this *transfer_session)check_finish()(bool){
 
 
 func send_finish (s interface{},wpk *packet.Wpacket){
-	fmt.Printf("send_finish\n")
 	session := s.(*tcpsession.Tcpsession)
-	//session.Close()
 	tsession := session.Ud().(*transfer_session)
 	if tsession.check_finish(){
-		fmt.Printf("send finish\n")
-		//session.Close()
+		session.Close()
 		return
 	}
 	tsession.send_file(session)
@@ -99,18 +99,47 @@ func session_close(session *tcpsession.Tcpsession){
 }
 
 func loadfile(){
-	filemap = make(map[string][]byte)
-	buf, err := ioutil.ReadFile("learnyouhaskell.pdf")
+	//从配置导入文件
+	F,err := os.Open("./config.txt")
 	if err != nil {
-		fmt.Printf("learnyouhaskell.pdf load error\n")
-	}else
-	{	
-		filemap["learnyouhaskell.pdf"] = buf
+		fmt.Printf("config.txt open failed\n")
+		return
 	}
+	filemap = make(map[string][]byte)
+	bufferReader := bufio.NewReader(F)
+	eof := false
+	for !eof {
+		line,err := bufferReader.ReadString('\n')
+		if err == io.EOF{
+			err = nil
+			eof = true
+		}else if err != nil{
+			fmt.Printf("parse file error\n")
+			return
+		}
+		if len(line) > 1 {
+			line = line[0:len(line)-1]//drop '\n'
+			fileconfig := strings.Split(line,"=")
+			if len(fileconfig) == 2 {
+				buf, err := ioutil.ReadFile(fileconfig[0])
+				if err != nil {
+					fmt.Printf("%s load error\n",fileconfig[0])
+				}else{	
+					filemap[fileconfig[1]] = buf
+					fmt.Printf("%s load success,key %s\n",fileconfig[0],fileconfig[1])
+				}
+			}
+		}
+	}
+	
+	if filemap["golang"] == nil {
+		fmt.Printf("golang not found\n")
+	}
+	
 	fmt.Printf("loadfile finish\n")	
 }
 
-func main(){
+func main(){	
 	service := ":8010"
 	tcpAddr,err := net.ResolveTCPAddr("tcp4", service)
 	if err != nil{
