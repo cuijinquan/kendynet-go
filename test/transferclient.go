@@ -1,3 +1,8 @@
+/*
+ * 文件传送客户端 
+ * 
+ */ 
+
 package main
 
 import(
@@ -6,6 +11,7 @@ import(
 	packet "kendynet-go/packet"
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 const (
@@ -71,6 +77,12 @@ func session_close(session *tcpsession.Tcpsession){
 }
 
 func main(){
+	
+	if len(os.Args) < 3 {
+		fmt.Printf("usage ./transferclient <filename> <savefilename\n")
+		return
+	}
+	
 	service := ":8010"
 	tcpAddr,err := net.ResolveTCPAddr("tcp4", service)
 	if err != nil{
@@ -87,9 +99,9 @@ func main(){
 		//发出文件请求
 		wpk := packet.NewWpacket(packet.NewByteBuffer(64),false)
 		wpk.PutUint16(request_file)
-		wpk.PutString("learnyouhaskell.pdf")
+		wpk.PutString(os.Args[1])
 		session.Send(wpk,nil)
-		tsession := &transfer_session{filename:"learnyouhaskell1.pdf"}
+		tsession := &transfer_session{filename:os.Args[2]}
 		session.SetUd(tsession)	
 		tcpsession.ProcessSession(session,process_client,session_close)
 	}
