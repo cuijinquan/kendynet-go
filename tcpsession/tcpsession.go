@@ -86,10 +86,17 @@ func dosend(session *Tcpsession){
 		if !ok {
 			return
 		}
-		_,err := session.Conn.Write(wpk.Buffer().Bytes()[0:wpk.Buffer().Len()])
-		if err != nil {
-			session.send_close = true
-			return
+		begidx := 0
+		for{
+			n,err := session.Conn.Write(wpk.Buffer().Bytes()[begidx:wpk.Buffer().Len()])
+			if err != nil || n == 0 {
+				session.send_close = true
+				return
+			}
+			begidx += n
+			if begidx >= int(wpk.Buffer().Len()){
+				break
+			}
 		}
 		if wpk.Fn_sendfinish != nil{
 			wpk.Fn_sendfinish(session,wpk)
