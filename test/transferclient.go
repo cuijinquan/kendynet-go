@@ -82,17 +82,14 @@ func main(){
 		fmt.Printf("usage ./transferclient <filename> <savefilename\n")
 		return
 	}
-	
-	service := ":8010"
+	service := "127.0.0.1:8010"
 	tcpAddr,err := net.ResolveTCPAddr("tcp4", service)
 	if err != nil{
 		fmt.Printf("ResolveTCPAddr")
 	}
-	
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
-	
 	if err != nil {
-		fmt.Printf("DialTcp error\n")
+		fmt.Printf("DialTcp error,%s\n",err)
 	}else{
 		session := tcpsession.NewTcpSession(conn,false)
 		fmt.Printf("connect sucessful\n")
