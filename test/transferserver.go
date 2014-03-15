@@ -98,6 +98,16 @@ func session_close(session *tcpsession.Tcpsession){
 	fmt.Printf("client disconnect\n")
 }
 
+func drop_linebreak(input string)(string){
+	size := len(input)
+	if size > 2 && input[size-2] == '\r' && input[size-1] == '\n' {
+		return input[0:size-2]
+	}else if size > 1 && input[size-1] == '\n' {
+		return input[0:size-1]
+	}
+	return input
+}
+
 func loadfile(){
 	//从配置导入文件
 	F,err := os.Open("./config.txt")
@@ -118,11 +128,11 @@ func loadfile(){
 			return
 		}
 		if len(line) > 1 {
-			line = line[0:len(line)-1]//drop '\n'
+			line = drop_linebreak(line)//去掉行尾换行符
 			fileconfig := strings.Split(line,"=")
 			if len(fileconfig) == 2 {
 				buf, err := ioutil.ReadFile(fileconfig[0])
-				if err != nil {
+				if err != nil || buf == nil{
 					fmt.Printf("%s load error\n",fileconfig[0])
 				}else{	
 					filemap[fileconfig[1]] = buf
@@ -131,16 +141,11 @@ func loadfile(){
 			}
 		}
 	}
-	
-	if filemap["golang"] == nil {
-		fmt.Printf("golang not found\n")
-	}
-	
 	fmt.Printf("loadfile finish\n")	
 }
 
 func main(){	
-	service := ":8010"
+	service := "127.0.0.1:8010"
 	tcpAddr,err := net.ResolveTCPAddr("tcp4", service)
 	if err != nil{
 		fmt.Printf("ResolveTCPAddr")
