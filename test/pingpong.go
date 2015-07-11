@@ -9,12 +9,13 @@ import(
 func handleclient(Conn net.Conn){
 	recvbuf := make([]byte,16000)
 	for{
-		_,err := Conn.Read(recvbuf)
+		len,err := Conn.Read(recvbuf)
 		if err != nil {
 			Conn.Close()
 			return
 		}
-		_,err = Conn.Write(recvbuf)
+		sendbuf := recvbuf[:len]
+		_,err = Conn.Write(sendbuf)
 		if err != nil {
 			Conn.Close()
 			return
