@@ -1,5 +1,7 @@
 package packet
 
+import "net"
+
 type Decoder interface{
-	UnPack()(*Packet)
+	DoRecv(Conn *net.Conn)(*Packet,error)
 }
