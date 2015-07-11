@@ -23,6 +23,7 @@ func main(){
 	if str != "韶关" {
 		fmt.Printf("bad\n")
 	}
+
 }
 
 

@@ -18,26 +18,26 @@ func NewWPacket(buffer *ByteBuffer)(*WPacket){
 	return &WPacket{writeidx:4,buffer:buffer,Type:WPACKET,CopyCreate:0}
 }
 
-func (this *WPacket)Buffer()(*ByteBuffer){
+func (this WPacket)Buffer()(*ByteBuffer){
 	return this.buffer
 }
 
-func (this *WPacket)Clone() (*Packet){
+func (this WPacket)Clone() (*Packet){
 	wpk := NewWPacket(this.buffer)
 	wpk.CopyCreate = 1
 	return (*Packet)(unsafe.Pointer(wpk))
 }
 
 
-func (this *WPacket)MakeWrite()(*Packet){
+func (this WPacket)MakeWrite()(*Packet){
 	return this.Clone()
 }
 
-func (this *WPacket)MakeRead()(*Packet){
+func (this WPacket)MakeRead()(*Packet){
 	return (*Packet)(unsafe.Pointer(NewRPacket(this.buffer)))
 }
 
-func (this *WPacket)copyOnWrite(){
+func (this WPacket)copyOnWrite(){
 	if this.CopyCreate == 1 {
 		this.buffer = this.buffer.Clone()
 		this.CopyCreate = 0
@@ -111,7 +111,7 @@ func (this *WPacket)PutBinary(value []byte)(error){
 	return nil
 }
 
-func (this *WPacket) DataLen()(uint32){
+func (this WPacket) DataLen()(uint32){
 	if this.buffer == nil {
 		return 0
 	}
@@ -122,7 +122,7 @@ func (this *WPacket) DataLen()(uint32){
 	return len
 }
 
-func (this *WPacket) PkLen()(uint32){
+func (this WPacket) PkLen()(uint32){
 	if this.buffer == nil {
 		return 0
 	}

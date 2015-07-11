@@ -3,27 +3,29 @@ package tcpsession
 import(
 	   "net"
 	   packet "kendynet-go/packet"
-	   "encoding/binary"
 	   "fmt"
-	   "io"
    )
 
 var (
 	ErrUnPackError     = fmt.Errorf("TcpSession: UnpackError")
+	ErrSendClose       = fmt.Errorf("send close")
+	ErrSocketClose     = fmt.Errorf("socket close")
+)
+
+var (
+	close_event        = packet.NewRPacket(packet.NewByteBuffer(0))
 )
 
 type Tcpsession struct{
-	Conn net.Conn
-	Packet_que chan interface{}
-	Send_que chan *packet.WPacket
-	raw bool
-	send_close bool
-	ud interface{}
+	Conn         net.Conn
+	Packet_que   chan packet.Packet
+	Send_que     chan packet.Packet
+	decoder      packet.Decoder
+	send_close   bool
+	socket_close bool
+	ud           interface{}
 }
 
-func (this *Tcpsession) IsRaw()(bool){
-	return this.raw
-}
 
 func (this *Tcpsession) SetUd(ud interface{}){
 	this.ud = ud
@@ -35,119 +37,92 @@ func (this *Tcpsession) Ud()(interface{}){
 
 func dorecv(session *Tcpsession){
 	for{
-		header := make([]byte,4)
-		n, err := io.ReadFull(session.Conn, header)
-		if n == 0 && err == io.EOF {
-			close(session.Packet_que)
-			break
-		}else if err != nil {
-			close(session.Packet_que)
-			break
-		}
-		size := binary.LittleEndian.Uint32(header)
-		if size > packet.Max_bufsize {
-			close(session.Packet_que)
-			break
-		}
-		
-		body := make([]byte,size)
-		n, err = io.ReadFull(session.Conn, body)
-		if n == 0 && err == io.EOF {
-			close(session.Packet_que)
-			break
-		}else if err != nil {
-			close(session.Packet_que)
-			break
-		}
-		pkbuf := make([]byte,size+4)
-		copy(pkbuf[:],header[:])
-		copy(pkbuf[4:],body[:])
-		rpk := packet.NewRPacket(packet.NewBufferByBytes(pkbuf))
-		session.Packet_que <- rpk		
-	}
-}
-
-func dorecv_raw(session *Tcpsession){
-	for{
-		recvbuf := make([]byte,packet.Max_bufsize)
-		_,err := session.Conn.Read(recvbuf)
+		p,err := session.decoder.DoRecv(session.Conn)
 		if err != nil {
-			session.Packet_que <- "rclose"
-			return
+			session.Packet_que <- close_event
+			break
 		}
-		rpk := packet.NewRPacket(packet.NewBufferByBytes(recvbuf))
-		session.Packet_que <- rpk
+		session.Packet_que <- p	
 	}
 }
 
 func dosend(session *Tcpsession){
 	for{
-		wpk,ok :=  <-session.Send_que
+		wpk,ok :=  <- session.Send_que
 		if !ok {
 			return
 		}
-		begidx := 0
+		idx := (uint32)(0)
 		for{
-			n,err := session.Conn.Write(wpk.Buffer().Bytes()[begidx:wpk.Buffer().Len()])
-			if err != nil || n == 0 {
+			buff  := wpk.Buffer().Bytes()
+			end   := wpk.PkLen()
+			n,err := session.Conn.Write(buff[idx:end])
+			if err != nil || n < 0 {
 				session.send_close = true
 				return
 			}
-			begidx += n
-			if begidx >= int(wpk.Buffer().Len()){
+			idx += (uint32)(n)
+			if idx >= (uint32)(end){
 				break
 			}
 		}
-		if wpk.Fn_sendfinish != nil{
-			wpk.Fn_sendfinish(session,wpk)
-		}
 	}
 }
 
 
-func ProcessSession(tcpsession *Tcpsession,process_packet func (*Tcpsession,*packet.RPacket),session_close func (*Tcpsession)){
+func ProcessSession(tcpsession *Tcpsession,
+					process_packet func (*Tcpsession,packet.Packet),
+					decoder packet.Decoder)(error){
+	if tcpsession.socket_close{
+		return ErrSocketClose
+	}
+	tcpsession.decoder = decoder
+	go dorecv(tcpsession)
+	go dosend(tcpsession)	
 	for{
 		msg,ok := <- tcpsession.Packet_que
 		if !ok {
-			fmt.Printf("client disconnect\n")
-			return
+			//log error
+			return nil
 		}
-		switch msg.(type){
-			case * packet.RPacket:
-				rpk := msg.(*packet.RPacket)
-				process_packet(tcpsession,rpk)
-			case string:
-				str := msg.(string)
-				if str == "rclose"{
-					session_close(tcpsession)
-					close(tcpsession.Packet_que)
-					close(tcpsession.Send_que)
-					tcpsession.Conn.Close()
-					return
-				}
+		if msg == close_event{
+			process_packet(tcpsession,nil)
+		}else{
+			process_packet(tcpsession,msg)
+		}
+		if tcpsession.socket_close{
+			fmt.Printf("client disconnect\n")
+			return nil
 		}
 	}
 }
 
-func NewTcpSession(conn net.Conn,raw bool)(*Tcpsession){
-	session := &Tcpsession{Conn:conn,Packet_que:make(chan interface{},1024),Send_que:make(chan *packet.WPacket,1024),raw:raw,send_close:false}
-	if raw{
-		go dorecv_raw(session)
-	}else{
-		go dorecv(session)
-	}
-	go dosend(session)
+func NewTcpSession(conn net.Conn)(*Tcpsession){
+	session := new(Tcpsession)
+	session.Conn = conn
+	session.Packet_que   = make(chan packet.Packet,1024)
+	session.Send_que     = make(chan packet.Packet,1024)
+	session.send_close   = false
+	session.socket_close = false
 	return session
 }
 
-func (this *Tcpsession)Send(wpk *packet.WPacket,send_finish func(interface{},*packet.WPacket))(error){
-	if !this.send_close{
-		wpk.Fn_sendfinish = send_finish
-		this.Send_que <- wpk
+func (this *Tcpsession)Send(wpk packet.Packet)(error){
+	if this.socket_close{
+		return ErrSocketClose
+	}else if(this.send_close){
+		return ErrSendClose
 	}
+	this.Send_que <- wpk
 	return nil
 }
 
 func (this *Tcpsession)Close(){
+	if this.socket_close{
+		return
+	}
+	this.socket_close = true
 	this.Conn.Close()
+	close(this.Packet_que)
+	close(this.Send_que)
 }

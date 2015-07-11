@@ -1,6 +1,7 @@
 package packet
 import "unsafe"
 
+
 type RPacket struct{
 	Packet
 	buffer *ByteBuffer
@@ -15,20 +16,20 @@ func NewRPacket(buffer *ByteBuffer)(*RPacket){
 	return &RPacket{readidx:4,buffer:buffer,Type:RPACKET}
 }
 
-func (this *RPacket) Buffer()(*ByteBuffer){
+func (this RPacket) Buffer()(*ByteBuffer){
 	return this.buffer
 }
 
-func (this *RPacket)Clone() (*Packet){
+func (this RPacket)Clone() (*Packet){
 	return (*Packet)(unsafe.Pointer(NewRPacket(this.buffer)))
 }
 
 
-func (this *RPacket)MakeWrite()(*Packet){
+func (this RPacket)MakeWrite()(*Packet){
 	return this.Clone()
 }
 
-func (this *RPacket)MakeRead()(*Packet){
+func (this RPacket)MakeRead()(*Packet){
 	return (*Packet)(unsafe.Pointer(NewWPacket(this.buffer)))
 }
 
@@ -69,7 +70,7 @@ func (this *RPacket) Binary()([]byte,error){
 	return value,nil
 }
 
-func (this *RPacket) DataLen()(uint32){
+func (this RPacket) DataLen()(uint32){
 	if this.buffer == nil {
 		return 0
 	}
@@ -80,7 +81,7 @@ func (this *RPacket) DataLen()(uint32){
 	return len
 }
 
-func (this *RPacket) PkLen()(uint32){
+func (this RPacket) PkLen()(uint32){
 	if this.buffer == nil {
 		return 0
 	}

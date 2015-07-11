@@ -12,4 +12,5 @@ type Packet interface{
 	Clone()    (*Packet)
 	PkLen()    (uint32)
 	DataLen()  (uint32)
+	Buffer()   (*ByteBuffer)
 }

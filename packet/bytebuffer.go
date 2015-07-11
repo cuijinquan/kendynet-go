@@ -40,8 +40,8 @@ const (
 
 type ByteBuffer struct {
 	buffer []byte
-	len uint32
-	cap uint32
+	datasize uint32
+	capacity uint32
 }
 
 
@@ -50,8 +50,8 @@ var (
 	ErrInvaildData              = fmt.Errorf("bytebuffer: Invaild Data")
 )
 
-func NewBufferByBytes(bytes []byte)(*ByteBuffer){
-	return &ByteBuffer{buffer:bytes,len:(uint32)(len(bytes)),cap:(uint32)(cap(bytes))}
+func NewBufferByBytes(bytes []byte,datasize uint32)(*ByteBuffer){
+	return &ByteBuffer{buffer:bytes,datasize:datasize,capacity:(uint32)(cap(bytes))}
 }
 
 
@@ -61,13 +61,13 @@ func NewByteBuffer(size uint32)(*ByteBuffer){
 	}else{
 		size = SizeofPow2(size)
 	}
-	return &ByteBuffer{buffer:make([]byte,size),len:0,cap:size}
+	return &ByteBuffer{buffer:make([]byte,size),datasize:0,capacity:size}
 }
 
 func (this *ByteBuffer)Clone() (*ByteBuffer){
-	b := make([]byte,this.cap)
-	copy(b[0:],this.buffer[:this.cap])
-	return &ByteBuffer{buffer:b,len:this.len,cap:this.cap}
+	b := make([]byte,this.capacity)
+	copy(b[0:],this.buffer[:this.capacity])
+	return &ByteBuffer{buffer:b,datasize:this.datasize,capacity:this.capacity}
 }
 
 func (this *ByteBuffer)Bytes()([]byte){
@@ -75,11 +75,11 @@ func (this *ByteBuffer)Bytes()([]byte){
 }
 
 func (this *ByteBuffer)Len()(uint32){
-	return this.len
+	return this.datasize
 }
 
 func (this *ByteBuffer)Cap()(uint32){
-	return this.cap
+	return this.capacity
 }
 
 func (this *ByteBuffer)expand(newsize uint32)(error){
@@ -90,15 +90,15 @@ func (this *ByteBuffer)expand(newsize uint32)(error){
 	//allocate new buffer
 	tmpbuf := make([]byte,newsize)
 	//copy data
-	copy(tmpbuf[0:], this.buffer[:this.len])
+	copy(tmpbuf[0:], this.buffer[:this.datasize])
 	//replace buffer
 	this.buffer = tmpbuf
-	this.cap = newsize
+	this.capacity = newsize
 	return nil
 }
 
 func (this *ByteBuffer)buffer_check(idx,size uint32)(error){
-	if idx+size > this.cap {
+	if idx+size > this.capacity {
 		err := this.expand(idx+size)
 		if err != nil {
 			return err
@@ -117,7 +117,7 @@ func (this *ByteBuffer)PutByte(idx uint32,value byte)(error){
 		return err
 	}
 	this.buffer[idx] = value
-	this.len += 1
+	this.datasize += 1
 	return nil
 }
 
@@ -131,7 +131,7 @@ func (this *ByteBuffer)PutUint16(idx uint32,value uint16)(error){
 		return err
 	}
 	binary.LittleEndian.PutUint16(this.buffer[idx:idx+2],value)
-	this.len += 2
+	this.datasize += 2
 	return nil
 }
 
@@ -145,7 +145,7 @@ func (this *ByteBuffer)PutUint32(idx uint32,value uint32)(error){
 		return err
 	}
 	binary.LittleEndian.PutUint32(this.buffer[idx:idx+4],value)
-	this.len += 4
+	this.datasize += 4
 	return nil
 }
 
@@ -164,7 +164,7 @@ func (this *ByteBuffer)PutString(idx uint32,value string)(error){
 	idx += 4
 	//second put string
 	copy(this.buffer[idx:],value[:len(value)])
-	this.len += (uint32)(len(value))
+	this.datasize += (uint32)(len(value))
 	return nil
 }
 
@@ -181,24 +181,24 @@ func (this *ByteBuffer)PutBinary(idx uint32,value []byte)(error){
 	idx += 4
 	//second put bin
 	copy(this.buffer[idx:],value[:len(value)])
-	this.len += (uint32)(len(value))
+	this.datasize += (uint32)(len(value))
 	return nil
 }
 
 func (this *ByteBuffer)PutRawBinary(value []byte)(error){
 	sizeneed := (uint32)(len(value))
-	err := this.buffer_check(uint32(this.len),sizeneed)
+	err := this.buffer_check(uint32(this.datasize),sizeneed)
 	if err != nil {
 		return err
 	}
 	//second put bin
-	copy(this.buffer[this.len:],value[:len(value)])
-	this.len += (uint32)(len(value))
+	copy(this.buffer[this.datasize:],value[:len(value)])
+	this.datasize += (uint32)(len(value))
 	return nil
 }
 
 func (this *ByteBuffer)Uint16(idx uint32)(ret uint16,err error){
-	if idx + 2 > this.len {
+	if idx + 2 > this.datasize {
 		ret = 0
 		err = ErrInvaildData
 		return
@@ -209,7 +209,7 @@ func (this *ByteBuffer)Uint16(idx uint32)(ret uint16,err error){
 }
 
 func (this *ByteBuffer)Uint32(idx uint32)(ret uint32,err error){
-	if idx + 4 > this.len {
+	if idx + 4 > this.datasize {
 		ret = 0
 		err = ErrInvaildData
 		return
@@ -220,14 +220,14 @@ func (this *ByteBuffer)Uint32(idx uint32)(ret uint32,err error){
 }
 
 func (this *ByteBuffer)String(idx uint32)(ret string,err error){
-	if idx + 4 > this.len {
+	if idx + 4 > this.datasize {
 		err = ErrInvaildData
 		return
 	}
 	//read string len
 	str_len,_ := this.Uint32(idx)
 	idx += 4
-	if idx + str_len > this.len {
+	if idx + str_len > this.datasize {
 		err = ErrInvaildData
 		return
 	}
@@ -238,14 +238,14 @@ func (this *ByteBuffer)String(idx uint32)(ret string,err error){
 
 
 func (this *ByteBuffer)Binary(idx uint32)(ret []byte,err error){
-	if idx + 4 > this.len {
+	if idx + 4 > this.datasize {
 		err = ErrInvaildData
 		return
 	}
 	//read bin len
 	bin_len,_ := this.Uint32(idx)
 	idx += 4
-	if idx + bin_len > this.len {
+	if idx + bin_len > this.datasize {
 		err = ErrInvaildData
 		return
 	}

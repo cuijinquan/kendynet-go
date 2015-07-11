@@ -7,18 +7,15 @@ import(
 	"fmt"
 )
 
-func send_finish (s interface{},wpk *packet.Wpacket){
-	session := s.(*tcpsession.Tcpsession)
-	session.Close()
+
+func process_client(session *tcpsession.Tcpsession,rpk packet.Packet){
+	if rpk == nil{
+		session.Close()
+		return
+	}
+	session.Send(rpk)
 }
 
-func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
-	session.Send(packet.NewWpacket(rpk.Buffer(),rpk.IsRaw()),send_finish)
-}
-
-func session_close(session *tcpsession.Tcpsession){
-	fmt.Printf("client disconnect\n")
-}
 
 func main(){
 	service := ":8010"
@@ -35,9 +32,9 @@ func main(){
 		if err != nil {
 			continue
 		}
-		session := tcpsession.NewTcpSession(conn,true)
+		session := tcpsession.NewTcpSession(conn)
 		fmt.Printf("a client comming\n")
-		go tcpsession.ProcessSession(session,process_client,session_close)
+		go tcpsession.ProcessSession(session,process_client,packet.NewRawDecoder())
 	}
 }
 
