@@ -3,7 +3,6 @@ package packet
 import (
 	"encoding/binary"
 	"fmt"
-	//"unsafe"
 )
 func IsPow2(size uint32) bool{
 	return (size&(size-1)) == 0
@@ -56,16 +55,6 @@ func NewBufferByBytes(bytes []byte)(*ByteBuffer){
 	return &ByteBuffer{buffer:bytes,len:(uint64)(len(bytes)),cap:(uint64)(cap(bytes))}
 }
 
-/*func NewBufferByOther(other *bytebuffer)(*bytebuffer){
-	if other == nil {
-		return nil
-	}
-	buf := &bytebuffer{buffer:make([]byte,other.Cap()),len:other.Len(),cap:other.Cap()}
-	//copy data
-	copy(buf.buffer[:],other.buffer[:other.Len()])
-	return buf
-}*/
-
 func NewByteBuffer(size uint32)(*ByteBuffer){
 	if size == 0 {
 		size = 64
@@ -73,6 +62,12 @@ func NewByteBuffer(size uint32)(*ByteBuffer){
 		size = SizeofPow2(size)
 	}
 	return &ByteBuffer{buffer:make([]byte,size),len:0,cap:uint64(size)}
+}
+
+func (this *ByteBuffer)Clone() (*ByteBuffer){
+	b := make([]byte,this.cap)
+	copy(b[0:],this.buffer[:this.cap])
+	return &ByteBuffer{buffer:b,len:this.len,cap:this.cap}
 }
 
 func (this *ByteBuffer)Bytes()([]byte){
@@ -112,6 +107,10 @@ func (this *ByteBuffer)buffer_check(idx,size uint32)(error){
 	return nil
 }
 
+func (this *ByteBuffer)SetByte(idx uint32,value byte){
+	this.buffer[idx] = value
+}
+
 func (this *ByteBuffer)PutByte(idx uint32,value byte)(error){
 	err := this.buffer_check(idx,1)
 	if err != nil {
@@ -122,6 +121,10 @@ func (this *ByteBuffer)PutByte(idx uint32,value byte)(error){
 	return nil
 }
 
+func (this *ByteBuffer)SetUint16(idx uint32,value uint16){
+	binary.LittleEndian.PutUint16(this.buffer[idx:idx+2],value)
+}
+
 func (this *ByteBuffer)PutUint16(idx uint32,value uint16)(error){
 	err := this.buffer_check(idx,2)
 	if err != nil {
@@ -130,6 +133,10 @@ func (this *ByteBuffer)PutUint16(idx uint32,value uint16)(error){
 	binary.LittleEndian.PutUint16(this.buffer[idx:idx+2],value)
 	this.len += 2
 	return nil
+}
+
+func (this *ByteBuffer)SetUint32(idx uint32,value uint32){
+	binary.LittleEndian.PutUint32(this.buffer[idx:idx+4],value)
 }
 
 func (this *ByteBuffer)PutUint32(idx uint32,value uint32)(error){

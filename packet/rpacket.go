@@ -1,51 +1,38 @@
 package packet
+import "unsafe"
 
-type Rpacket struct{
-	readidx uint32
+type RPacket struct{
+	Packet
 	buffer *ByteBuffer
-	raw bool
+	Type	byte
+	readidx uint32
 }
 
-func NewRpacket(buffer *ByteBuffer,raw bool)(*Rpacket){
+func NewRPacket(buffer *ByteBuffer)(*RPacket){
 	if buffer == nil {
 		return nil
 	}
-	if raw {
-		return &Rpacket{readidx:0,buffer:buffer,raw:raw}
-	}else
-	{
-		return &Rpacket{readidx:4,buffer:buffer,raw:raw}
-	}
+	return &RPacket{readidx:4,buffer:buffer,Type:RPACKET}
 }
 
-func (this *Rpacket) IsRaw()(bool){
-	return this.raw
-}
-
-func (this *Rpacket) Buffer()(*ByteBuffer){
+func (this *RPacket) Buffer()(*ByteBuffer){
 	return this.buffer
 }
 
-func (this *Rpacket) Len()(uint32){
-	if this.buffer == nil {
-		return 0
-	}
-	if this.raw{
-		return uint32(this.buffer.Len())
-	}else{
-
-		len,err := this.buffer.Uint32(0)
-		if err != nil {
-			return 0
-		}
-		return len
-	}
+func (this *RPacket)Clone() (*Packet){
+	return (*Packet)(unsafe.Pointer(NewRPacket(this.buffer)))
 }
 
-func (this *Rpacket) Uint16()(uint16,error){
-	if this.raw{
-		return 0,ErrInvaildData
-	}
+
+func (this *RPacket)MakeWrite()(*Packet){
+	return this.Clone()
+}
+
+func (this *RPacket)MakeRead()(*Packet){
+	return (*Packet)(unsafe.Pointer(NewWPacket(this.buffer)))
+}
+
+func (this *RPacket) Uint16()(uint16,error){
 	value,err := this.buffer.Uint16(this.readidx)
 	if err != nil {
 		return 0,err
@@ -54,10 +41,7 @@ func (this *Rpacket) Uint16()(uint16,error){
 	return value,nil
 }
 
-func (this *Rpacket) Uint32()(uint32,error){
-	if this.raw{
-		return 0,ErrInvaildData
-	}
+func (this *RPacket) Uint32()(uint32,error){
 	value,err := this.buffer.Uint32(this.readidx)
 	if err != nil {
 		return 0,err
@@ -66,10 +50,7 @@ func (this *Rpacket) Uint32()(uint32,error){
 	return value,nil
 }
 
-func (this *Rpacket) String()(string,error){
-	if this.raw{
-		return "",ErrInvaildData
-	}
+func (this *RPacket) String()(string,error){
 	value,err := this.buffer.String(this.readidx)
 	if err != nil {
 		return "",err
@@ -79,22 +60,29 @@ func (this *Rpacket) String()(string,error){
 
 }
 
-func (this *Rpacket) Binary()([]byte,error){
-	if this.raw{
-		if this.readidx != 0{
-			return nil,ErrInvaildData
-		}
-		value,err := this.buffer.Binary(this.readidx)
-		if err != nil {
-			return nil,err
-		}
-		return value,nil
-	}else{
-		value,err := this.buffer.Binary(this.readidx)
-		if err != nil {
-			return nil,err
-		}
-		this.readidx += (4 + (uint32)(len(value)))
-		return value,nil
+func (this *RPacket) Binary()([]byte,error){
+	value,err := this.buffer.Binary(this.readidx)
+	if err != nil {
+		return nil,err
 	}
+	this.readidx += (4 + (uint32)(len(value)))
+	return value,nil
+}
+
+func (this *RPacket) DataLen()(uint32){
+	if this.buffer == nil {
+		return 0
+	}
+	len,err := this.buffer.Uint32(0)
+	if err != nil {
+		return 0
+	}
+	return len
+}
+
+func (this *RPacket) PkLen()(uint32){
+	if this.buffer == nil {
+		return 0
+	}
+	return this.DataLen() + 4
 }

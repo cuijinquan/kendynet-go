@@ -1,43 +1,54 @@
 package packet
-import (
-	"encoding/binary"
-	)
+import "unsafe"
 	
-type Wpacket struct{
-	writeidx uint32
-	buffer *ByteBuffer
-	raw bool
-	Fn_sendfinish func(interface{},*Wpacket)
+type WPacket struct{
+	Packet
+	buffer     *ByteBuffer
+	Type	    byte
+	writeidx    uint32
+	CopyCreate  byte
+	Fn_sendfinish func(interface{},*WPacket)
 }
 
-func NewWpacket(buffer *ByteBuffer,raw bool)(*Wpacket){
+func NewWPacket(buffer *ByteBuffer)(*WPacket){
 	if buffer == nil {
 		return nil
 	}
-	if raw {
-		return &Wpacket{writeidx:0,buffer:buffer,raw:raw}
-	}else{
-		buffer.PutUint32(0,0)
-		return &Wpacket{writeidx:4,buffer:buffer,raw:raw}
-	}
+	buffer.PutUint32(0,0)
+	return &WPacket{writeidx:4,buffer:buffer,Type:WPACKET,CopyCreate:0}
 }
 
-func (this *Wpacket) IsRaw()(bool){
-	return this.raw
-}
-
-func (this *Wpacket)Buffer()(*ByteBuffer){
+func (this *WPacket)Buffer()(*ByteBuffer){
 	return this.buffer
 }
 
+func (this *WPacket)Clone() (*Packet){
+	wpk := NewWPacket(this.buffer)
+	wpk.CopyCreate = 1
+	return (*Packet)(unsafe.Pointer(wpk))
+}
 
-func (this *Wpacket)PutUint16(value uint16)(error){
+
+func (this *WPacket)MakeWrite()(*Packet){
+	return this.Clone()
+}
+
+func (this *WPacket)MakeRead()(*Packet){
+	return (*Packet)(unsafe.Pointer(NewRPacket(this.buffer)))
+}
+
+func (this *WPacket)copyOnWrite(){
+	if this.CopyCreate == 1 {
+		this.buffer = this.buffer.Clone()
+		this.CopyCreate = 0
+	}
+}
+
+func (this *WPacket)PutUint16(value uint16)(error){
 	if this.buffer == nil {
 		return ErrInvaildData
 	}
-	if this.raw {
-		return ErrInvaildData
-	}
+	this.copyOnWrite()
 	size,err := this.buffer.Uint32(0)
 	if err != nil {
 		return err
@@ -48,17 +59,12 @@ func (this *Wpacket)PutUint16(value uint16)(error){
 	}
 	size += 2
 	this.writeidx += 2
-	binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
+	this.buffer.SetUint32(0,size)
 	return nil
 }
 
-func (this *Wpacket)PutUint32(value uint32)(error){
-	if this.buffer == nil {
-		return ErrInvaildData
-	}
-	if this.raw {
-		return ErrInvaildData
-	}
+func (this *WPacket)PutUint32(value uint32)(error){
+	this.copyOnWrite()
 	size,err := this.buffer.Uint32(0)
 	if err != nil {
 		return err
@@ -69,17 +75,12 @@ func (this *Wpacket)PutUint32(value uint32)(error){
 	}
 	size += 4
 	this.writeidx += 4
-	binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
+	this.buffer.SetUint32(0,size)
 	return nil
 }
 
-func (this *Wpacket)PutString(value string)(error){
-	if this.buffer == nil {
-		return ErrInvaildData
-	}
-	if this.raw {
-		return ErrInvaildData
-	}
+func (this *WPacket)PutString(value string)(error){
+	this.copyOnWrite()
 	size,err := this.buffer.Uint32(0)
 	if err != nil {
 		return err
@@ -90,35 +91,40 @@ func (this *Wpacket)PutString(value string)(error){
 	}
 	size += (4+(uint32)(len(value)))
 	this.writeidx += (4+(uint32)(len(value)))
-	binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
+	this.buffer.SetUint32(0,size)
 	return nil
 }
 
-func (this *Wpacket)PutBinary(value []byte)(error){
-	if this.buffer == nil {
-		return ErrInvaildData
+func (this *WPacket)PutBinary(value []byte)(error){
+	this.copyOnWrite()
+	size,err := this.buffer.Uint32(0)
+	if err != nil {
+		return err
 	}
-	if this.raw {
-		if this.writeidx != 0{
-			return ErrInvaildData
-		}
-		err := this.buffer.PutBinary(this.writeidx,value)
-		if err != nil{
-			return err
-		}
-		this.writeidx += uint32(len(value))
-	}else{
-		size,err := this.buffer.Uint32(0)
-		if err != nil {
-			return err
-		}
-		err = this.buffer.PutBinary(this.writeidx,value)
-		if err != nil{
-			return err
-		}
-		size += (4+(uint32)(len(value)))
-		this.writeidx += (4+(uint32)(len(value)))
-		binary.LittleEndian.PutUint32(this.buffer.Bytes()[0:4],size)
+	err = this.buffer.PutBinary(this.writeidx,value)
+	if err != nil{
+		return err
 	}
+	size += (4+(uint32)(len(value)))
+	this.writeidx += (4+(uint32)(len(value)))
+	this.buffer.SetUint32(0,size)
 	return nil
+}
+
+func (this *WPacket) DataLen()(uint32){
+	if this.buffer == nil {
+		return 0
+	}
+	len,err := this.buffer.Uint32(0)
+	if err != nil {
+		return 0
+	}
+	return len
+}
+
+func (this *WPacket) PkLen()(uint32){
+	if this.buffer == nil {
+		return 0
+	}
+	return this.DataLen() + 4
 }

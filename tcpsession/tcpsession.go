@@ -15,7 +15,7 @@ var (
 type Tcpsession struct{
 	Conn net.Conn
 	Packet_que chan interface{}
-	Send_que chan *packet.Wpacket
+	Send_que chan *packet.WPacket
 	raw bool
 	send_close bool
 	ud interface{}
@@ -62,7 +62,7 @@ func dorecv(session *Tcpsession){
 		pkbuf := make([]byte,size+4)
 		copy(pkbuf[:],header[:])
 		copy(pkbuf[4:],body[:])
-		rpk := packet.NewRpacket(packet.NewBufferByBytes(pkbuf),false)
+		rpk := packet.NewRPacket(packet.NewBufferByBytes(pkbuf))
 		session.Packet_que <- rpk		
 	}
 }
@@ -75,7 +75,7 @@ func dorecv_raw(session *Tcpsession){
 			session.Packet_que <- "rclose"
 			return
 		}
-		rpk := packet.NewRpacket(packet.NewBufferByBytes(recvbuf),true)
+		rpk := packet.NewRPacket(packet.NewBufferByBytes(recvbuf))
 		session.Packet_que <- rpk
 	}
 }
@@ -105,7 +105,7 @@ func dosend(session *Tcpsession){
 }
 
 
-func ProcessSession(tcpsession *Tcpsession,process_packet func (*Tcpsession,*packet.Rpacket),session_close func (*Tcpsession)){
+func ProcessSession(tcpsession *Tcpsession,process_packet func (*Tcpsession,*packet.RPacket),session_close func (*Tcpsession)){
 	for{
 		msg,ok := <- tcpsession.Packet_que
 		if !ok {
@@ -113,8 +113,8 @@ func ProcessSession(tcpsession *Tcpsession,process_packet func (*Tcpsession,*pac
 			return
 		}
 		switch msg.(type){
-			case * packet.Rpacket:
-				rpk := msg.(*packet.Rpacket)
+			case * packet.RPacket:
+				rpk := msg.(*packet.RPacket)
 				process_packet(tcpsession,rpk)
 			case string:
 				str := msg.(string)
@@ -130,7 +130,7 @@ func ProcessSession(tcpsession *Tcpsession,process_packet func (*Tcpsession,*pac
 }
 
 func NewTcpSession(conn net.Conn,raw bool)(*Tcpsession){
-	session := &Tcpsession{Conn:conn,Packet_que:make(chan interface{},1024),Send_que:make(chan *packet.Wpacket,1024),raw:raw,send_close:false}
+	session := &Tcpsession{Conn:conn,Packet_que:make(chan interface{},1024),Send_que:make(chan *packet.WPacket,1024),raw:raw,send_close:false}
 	if raw{
 		go dorecv_raw(session)
 	}else{
@@ -140,7 +140,7 @@ func NewTcpSession(conn net.Conn,raw bool)(*Tcpsession){
 	return session
 }
 
-func (this *Tcpsession)Send(wpk *packet.Wpacket,send_finish func(interface{},*packet.Wpacket))(error){
+func (this *Tcpsession)Send(wpk *packet.WPacket,send_finish func(interface{},*packet.WPacket))(error){
 	if !this.send_close{
 		wpk.Fn_sendfinish = send_finish
 		this.Send_que <- wpk
