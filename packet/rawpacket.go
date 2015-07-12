@@ -40,3 +40,7 @@ func (this RawPacket) DataLen()(uint32){
 func (this RawPacket) PkLen()(uint32){
 	return this.DataLen()
 }
+
+func (this RawPacket) GetType()(byte){
+	return this.Type
+}

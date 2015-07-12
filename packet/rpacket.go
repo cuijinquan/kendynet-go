@@ -86,3 +86,7 @@ func (this RPacket) PkLen()(uint32){
 	}
 	return this.DataLen() + 4
 }
+
+func (this RPacket) GetType()(byte){
+	return this.Type
+}

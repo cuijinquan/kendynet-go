@@ -53,7 +53,7 @@ func (this *transfer_session)send_file(session *tcpsession.Tcpsession){
 	}
 }
 
-func process_client(session *tcpsession.Tcpsession,p packet.Packet){
+func process_client(session *tcpsession.Tcpsession,p packet.Packet,_ error){
 	rpk := p.(packet.RPacket)
 	cmd,_ := rpk.Uint16()
 	if cmd == request_file {

@@ -38,7 +38,7 @@ func (this *transfer_session)recv_file(rpk packet.RPacket)(bool){
 	return false
 }
 
-func process_client(session *tcpsession.Tcpsession,p packet.Packet){
+func process_client(session *tcpsession.Tcpsession,p packet.Packet,_ error){
 	rpk := p.(packet.RPacket)
 	cmd,_ := rpk.Uint16()
 	if cmd == file_size {

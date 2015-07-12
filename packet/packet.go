@@ -2,8 +2,9 @@ package packet
 
 const (
 	RAWPACKET = 1
-	RPACKET
-	WPACKET
+	RPACKET   = 2
+	WPACKET   = 3
+	EPACKET   = 4
 )
 
 type Packet interface{
@@ -13,4 +14,5 @@ type Packet interface{
 	PkLen()    (uint32)
 	DataLen()  (uint32)
 	Buffer()   (*ByteBuffer)
+	GetType()  (byte)
 }

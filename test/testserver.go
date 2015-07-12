@@ -8,8 +8,9 @@ import(
 )
 
 
-func process_client(session *tcpsession.Tcpsession,rpk packet.Packet){
+func process_client(session *tcpsession.Tcpsession,rpk packet.Packet,errno error){
 	if rpk == nil{
+		fmt.Printf("%s\n",errno)
 		session.Close()
 		return
 	}

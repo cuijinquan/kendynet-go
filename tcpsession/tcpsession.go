@@ -12,9 +12,6 @@ var (
 	ErrSocketClose     = fmt.Errorf("socket close")
 )
 
-var (
-	close_event        = packet.NewRPacket(packet.NewByteBuffer(0))
-)
 
 type Tcpsession struct{
 	Conn         net.Conn
@@ -23,7 +20,6 @@ type Tcpsession struct{
 	socket_close bool
 	ud           interface{}
 }
-
 
 func (this *Tcpsession) SetUd(ud interface{}){
 	this.ud = ud
@@ -40,7 +36,7 @@ func dorecv(session *Tcpsession){
 			break
 		}
 		if err != nil {
-			session.Packet_que <- close_event
+			session.Packet_que <- packet.NewEventPacket(err)
 			break
 		}
 		session.Packet_que <- p	
@@ -50,7 +46,7 @@ func dorecv(session *Tcpsession){
 
 
 func ProcessSession(tcpsession *Tcpsession,
-					process_packet func (*Tcpsession,packet.Packet),
+					process_packet func (*Tcpsession,packet.Packet,error),
 					decoder packet.Decoder)(error){
 	if tcpsession.socket_close{
 		return ErrSocketClose
@@ -63,13 +59,12 @@ func ProcessSession(tcpsession *Tcpsession,
 			//log error
 			return nil
 		}
-		if msg == close_event{
-			process_packet(tcpsession,nil)
+		if packet.EPACKET == msg.GetType(){
+			process_packet(tcpsession,nil,msg.(packet.EventPacket).GetError())
 		}else{
-			process_packet(tcpsession,msg)
+			process_packet(tcpsession,msg,nil)
 		}
 		if tcpsession.socket_close{
-			fmt.Printf("client disconnect\n")
 			return nil
 		}
 	}

@@ -127,3 +127,7 @@ func (this WPacket) PkLen()(uint32){
 	}
 	return this.DataLen() + 4
 }
+
+func (this WPacket) GetType()(byte){
+	return this.Type
+}

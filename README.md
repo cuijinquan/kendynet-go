@@ -3,26 +3,23 @@ go语言编写的网络库
 ```go
 	package main
 
-	import (
-			"net"
-			tcpsession "kendynet-go/tcpsession"
-			packet "kendynet-go/packet"
-			"fmt"
-		   )
+	import(
+		"net"
+		tcpsession "kendynet-go/tcpsession"
+		packet "kendynet-go/packet"
+		"fmt"
+	)
 
 
-	func send_finish (s interface{},wpk *packet.Wpacket){
-		session := s.(*tcpsession.Tcpsession)
-		session.Close()
+	func process_client(session *tcpsession.Tcpsession,rpk packet.Packet,errno error){
+		if rpk == nil{
+			fmt.Printf("%s\n",errno)
+			session.Close()
+			return
+		}
+		session.Send(rpk)
 	}
 
-	func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
-		session.Send(packet.NewWpacket(rpk.Buffer(),rpk.IsRaw()),send_finish)
-	}
-
-	func session_close(session *tcpsession.Tcpsession){
-		fmt.Printf("client disconnect\n")
-	}
 
 	func main(){
 		service := ":8010"
@@ -39,9 +36,9 @@ go语言编写的网络库
 			if err != nil {
 				continue
 			}
-			session := tcpsession.NewTcpSession(conn,true)
+			session := tcpsession.NewTcpSession(conn)
 			fmt.Printf("a client comming\n")
-			go tcpsession.ProcessSession(session,process_client,session_close)
+			go tcpsession.ProcessSession(session,process_client,packet.NewRawDecoder())
 		}
 	}
 ```

@@ -64,7 +64,6 @@ func (this RawDecoder)DoRecv(Conn net.Conn)(Packet,error){
 		return nil,err
 	}
 	rpk := NewRawPacket(NewBufferByBytes(buff,(uint32)(n)))
-	fmt.Printf("%d\n",rpk.PkLen())
 	return *rpk,nil		
 }
 
