@@ -97,7 +97,7 @@ func main(){
 		session.Send(wpk)
 		tsession := &transfer_session{filename:os.Args[2]}
 		session.SetUd(tsession)	
-		tcpsession.ProcessSession(session,process_client,packet.NewRPacketDecoder(65535))
+		tcpsession.ProcessSession(session,packet.NewRPacketDecoder(65535),process_client)
 	}
 }
 

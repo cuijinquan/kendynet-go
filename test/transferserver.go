@@ -146,7 +146,7 @@ func main(){
 		}
 		session := tcpsession.NewTcpSession(conn)
 		fmt.Printf("a client comming\n")
-		go tcpsession.ProcessSession(session,process_client,packet.NewRPacketDecoder(4096))
+		go tcpsession.ProcessSession(session,packet.NewRPacketDecoder(4096),process_client)
 	}
 }
 

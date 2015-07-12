@@ -45,9 +45,8 @@ func dorecv(session *Tcpsession){
 }
 
 
-func ProcessSession(tcpsession *Tcpsession,
-					process_packet func (*Tcpsession,packet.Packet,error),
-					decoder packet.Decoder)(error){
+func ProcessSession(tcpsession *Tcpsession,decoder packet.Decoder,
+					process_packet func (*Tcpsession,packet.Packet,error))(error){
 	if tcpsession.socket_close{
 		return ErrSocketClose
 	}

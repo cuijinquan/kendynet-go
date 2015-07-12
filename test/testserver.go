@@ -7,17 +7,6 @@ import(
 	"fmt"
 )
 
-
-func process_client(session *tcpsession.Tcpsession,rpk packet.Packet,errno error){
-	if rpk == nil{
-		fmt.Printf("%s\n",errno)
-		session.Close()
-		return
-	}
-	session.Send(rpk)
-}
-
-
 func main(){
 	service := ":8010"
 	tcpAddr,err := net.ResolveTCPAddr("tcp4", service)
@@ -35,7 +24,15 @@ func main(){
 		}
 		session := tcpsession.NewTcpSession(conn)
 		fmt.Printf("a client comming\n")
-		go tcpsession.ProcessSession(session,process_client,packet.NewRawDecoder())
+		go tcpsession.ProcessSession(session,packet.NewRawDecoder(),
+		   func (session *tcpsession.Tcpsession,rpk packet.Packet,errno error){	
+			if rpk == nil{
+				fmt.Printf("%s\n",errno)
+				session.Close()
+				return
+			}
+			session.Send(rpk)
+		   })
 	}
 }
 
