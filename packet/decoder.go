@@ -44,8 +44,7 @@ func (this RPacketDecoder)DoRecv(Conn net.Conn)(Packet,error){
 	}else if err != nil {
 		return nil,err
 	}
-	rpk := NewRPacket(NewBufferByBytes(buf,(uint32)(len(buf))))
-	return *rpk,nil
+	return NewRPacket(NewBufferByBytes(buf,(uint32)(len(buf)))),nil
 }
 
 type RawDecoder struct{
@@ -63,7 +62,6 @@ func (this RawDecoder)DoRecv(Conn net.Conn)(Packet,error){
 	}else if err != nil {
 		return nil,err
 	}
-	rpk := NewRawPacket(NewBufferByBytes(buff,(uint32)(n)))
-	return *rpk,nil		
+	return NewRawPacket(NewBufferByBytes(buff,(uint32)(n))),nil		
 }
 
