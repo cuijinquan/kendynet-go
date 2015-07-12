@@ -3,7 +3,6 @@ import "unsafe"
 
 
 type RPacket struct{
-	Packet
 	buffer *ByteBuffer
 	Type	byte
 	readidx uint32

@@ -2,7 +2,6 @@ package packet
 import "unsafe"
 
 type RawPacket struct{
-	Packet
 	buffer *ByteBuffer
 	Type	byte
 }

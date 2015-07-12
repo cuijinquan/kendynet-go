@@ -17,7 +17,6 @@ type Decoder interface{
 }
 
 type RPacketDecoder struct{
-	Decoder
 	maxpacket uint32
 }
 
@@ -50,7 +49,6 @@ func (this RPacketDecoder)DoRecv(Conn net.Conn)(Packet,error){
 }
 
 type RawDecoder struct{
-	Decoder
 }
 
 func NewRawDecoder()(RawDecoder){

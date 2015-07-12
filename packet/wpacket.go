@@ -2,7 +2,6 @@ package packet
 import "unsafe"
 	
 type WPacket struct{
-	Packet
 	buffer     *ByteBuffer
 	Type	    byte
 	writeidx    uint32

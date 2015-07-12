@@ -19,9 +19,7 @@ var (
 type Tcpsession struct{
 	Conn         net.Conn
 	Packet_que   chan packet.Packet
-	Send_que     chan packet.Packet
 	decoder      packet.Decoder
-	send_close   bool
 	socket_close bool
 	ud           interface{}
 }
@@ -38,35 +36,16 @@ func (this *Tcpsession) Ud()(interface{}){
 func dorecv(session *Tcpsession){
 	for{
 		p,err := session.decoder.DoRecv(session.Conn)
+		if session.socket_close{
+			break
+		}
 		if err != nil {
 			session.Packet_que <- close_event
 			break
 		}
 		session.Packet_que <- p	
 	}
-}
-
-func dosend(session *Tcpsession){
-	for{
-		wpk,ok :=  <- session.Send_que
-		if !ok {
-			return
-		}
-		idx := (uint32)(0)
-		for{
-			buff  := wpk.Buffer().Bytes()
-			end   := wpk.PkLen()
-			n,err := session.Conn.Write(buff[idx:end])
-			if err != nil || n < 0 {
-				session.send_close = true
-				return
-			}
-			idx += (uint32)(n)
-			if idx >= (uint32)(end){
-				break
-			}
-		}
-	}
+	close(session.Packet_que)
 }
 
 
@@ -78,7 +57,6 @@ func ProcessSession(tcpsession *Tcpsession,
 	}
 	tcpsession.decoder = decoder
 	go dorecv(tcpsession)
-	go dosend(tcpsession)	
 	for{
 		msg,ok := <- tcpsession.Packet_que
 		if !ok {
@@ -101,8 +79,6 @@ func NewTcpSession(conn net.Conn)(*Tcpsession){
 	session := new(Tcpsession)
 	session.Conn = conn
 	session.Packet_que   = make(chan packet.Packet,1024)
-	session.Send_que     = make(chan packet.Packet,1024)
-	session.send_close   = false
 	session.socket_close = false
 	return session
 }
@@ -110,10 +86,20 @@ func NewTcpSession(conn net.Conn)(*Tcpsession){
 func (this *Tcpsession)Send(wpk packet.Packet)(error){
 	if this.socket_close{
 		return ErrSocketClose
-	}else if(this.send_close){
-		return ErrSendClose
 	}
-	this.Send_que <- wpk
+	idx := (uint32)(0)
+	for{
+		buff  := wpk.Buffer().Bytes()
+		end   := wpk.PkLen()
+		n,err := this.Conn.Write(buff[idx:end])
+		if err != nil || n < 0 {
+			return ErrSendClose
+		}
+		idx += (uint32)(n)
+		if idx >= (uint32)(end){
+			break
+		}
+	}
 	return nil
 }
 
@@ -123,6 +109,4 @@ func (this *Tcpsession)Close(){
 	}
 	this.socket_close = true
 	this.Conn.Close()
-	close(this.Packet_que)
-	close(this.Send_que)
 }

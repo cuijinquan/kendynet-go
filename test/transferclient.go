@@ -27,7 +27,7 @@ type transfer_session struct{
 	filesize    int
 }
 
-func (this *transfer_session)recv_file(rpk *packet.Rpacket)(bool){
+func (this *transfer_session)recv_file(rpk packet.RPacket)(bool){
 	content,_ := rpk.Binary()
 	copy(this.filecontent[this.widx:],content[:])
 	this.widx += len(content)
@@ -38,7 +38,8 @@ func (this *transfer_session)recv_file(rpk *packet.Rpacket)(bool){
 	return false
 }
 
-func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
+func process_client(session *tcpsession.Tcpsession,p packet.Packet){
+	rpk := p.(packet.RPacket)
 	cmd,_ := rpk.Uint16()
 	if cmd == file_size {
 		if session.Ud() == nil {
@@ -72,10 +73,6 @@ func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
 	}
 }
 
-func session_close(session *tcpsession.Tcpsession){
-	fmt.Printf("client disconnect\n")
-}
-
 func main(){
 	
 	if len(os.Args) < 3 {
@@ -91,16 +88,16 @@ func main(){
 	if err != nil {
 		fmt.Printf("DialTcp error,%s\n",err)
 	}else{
-		session := tcpsession.NewTcpSession(conn,false)
+		session := tcpsession.NewTcpSession(conn)
 		fmt.Printf("connect sucessful\n")
 		//发出文件请求
-		wpk := packet.NewWpacket(packet.NewByteBuffer(64),false)
+		wpk := packet.NewWPacket(packet.NewByteBuffer(64))
 		wpk.PutUint16(request_file)
 		wpk.PutString(os.Args[1])
-		session.Send(wpk,nil)
+		session.Send(wpk)
 		tsession := &transfer_session{filename:os.Args[2]}
 		session.SetUd(tsession)	
-		tcpsession.ProcessSession(session,process_client,session_close)
+		tcpsession.ProcessSession(session,process_client,packet.NewRPacketDecoder(65535))
 	}
 }
 

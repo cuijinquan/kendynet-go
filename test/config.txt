@@ -1,3 +1,2 @@
-../learnyouhaskell.pdf=haskell
-../golang.1.1.2.chm=golang
-../NodeJS.pdf=NodeJS
+README.md=readme
+Go.pdf=Go

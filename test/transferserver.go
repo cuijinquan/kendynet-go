@@ -31,40 +31,30 @@ type transfer_session struct{
 }
 
 func (this *transfer_session)send_file(session *tcpsession.Tcpsession){
-	remain := len(this.filecontent) - this.ridx
-	sendsize := 0
-	if remain >= 16000 {
-		sendsize = 16000
-	}else{
-		sendsize = remain
+	for{
+		remain := len(this.filecontent) - this.ridx
+		sendsize := 0
+		if remain >= 16000 {
+			sendsize = 16000
+		}else{
+			sendsize = remain
+		}
+		wpk := packet.NewWPacket(packet.NewByteBuffer(uint32(sendsize)))
+		wpk.PutUint16(transfering)
+		wpk.PutBinary(this.filecontent[this.ridx:this.ridx+sendsize])
+		if nil == session.Send(wpk){
+			this.ridx += sendsize
+			if this.ridx >= len(this.filecontent){
+				break
+			}
+		}else{
+			break
+		}
 	}
-	wpk := packet.NewWpacket(packet.NewByteBuffer(uint32(sendsize)),false)
-	wpk.PutUint16(transfering)
-	wpk.PutBinary(this.filecontent[this.ridx:this.ridx+sendsize])
-	session.Send(wpk,send_finish)
-	this.ridx += sendsize
 }
 
-func (this *transfer_session)check_finish()(bool){
-	if this.ridx >= len(this.filecontent) {
-		return true
-	}
-	return false
-}
-
-
-
-func send_finish (s interface{},wpk *packet.Wpacket){
-	session := s.(*tcpsession.Tcpsession)
-	tsession := session.Ud().(*transfer_session)
-	if tsession.check_finish(){
-		session.Close()
-		return
-	}
-	tsession.send_file(session)
-}
-
-func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
+func process_client(session *tcpsession.Tcpsession,p packet.Packet){
+	rpk := p.(packet.RPacket)
 	cmd,_ := rpk.Uint16()
 	if cmd == request_file {
 		if session.Ud() != nil {
@@ -80,22 +70,16 @@ func process_client(session *tcpsession.Tcpsession,rpk *packet.Rpacket){
 				fmt.Printf("request file %s\n",filename)
 				tsession := &transfer_session{filecontent:filecontent,ridx:0}
 				session.SetUd(tsession)
-				
-				wpk := packet.NewWpacket(packet.NewByteBuffer(64),false)
+				wpk := packet.NewWPacket(packet.NewByteBuffer(64))
 				wpk.PutUint16(file_size)
 				wpk.PutUint32(uint32(len(filecontent)))
-				session.Send(wpk,nil)
-				tsession.send_file(session)
+				if nil == session.Send(wpk){
+					tsession.send_file(session)
+				}
 			}	
 		}
-	}else{
-		fmt.Printf("cmd error,%d\n",cmd)
-		session.Close()
 	}
-}
-
-func session_close(session *tcpsession.Tcpsession){
-	fmt.Printf("client disconnect\n")
+	session.Close()
 }
 
 func drop_linebreak(input string)(string){
@@ -110,7 +94,7 @@ func drop_linebreak(input string)(string){
 
 func loadfile(){
 	//从配置导入文件
-	F,err := os.Open("./config.txt")
+	F,err := os.Open("./test/config.txt")
 	if err != nil {
 		fmt.Printf("config.txt open failed\n")
 		return
@@ -160,9 +144,9 @@ func main(){
 		if err != nil {
 			continue
 		}
-		session := tcpsession.NewTcpSession(conn,false)
+		session := tcpsession.NewTcpSession(conn)
 		fmt.Printf("a client comming\n")
-		go tcpsession.ProcessSession(session,process_client,session_close)
+		go tcpsession.ProcessSession(session,process_client,packet.NewRPacketDecoder(4096))
 	}
 }
 
