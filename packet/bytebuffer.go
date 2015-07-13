@@ -224,26 +224,26 @@ func (this *ByteBuffer)String(idx uint32)(ret string,err error){
 		err = ErrInvaildData
 		return
 	}
-	//read string len
-	str_len,_ := this.Uint32(idx)
-	idx += 4
-	if idx + str_len > this.datasize {
-		err = ErrInvaildData
+	var bin []byte
+	bin,err = this.Binary(idx)
+	if err != nil {
 		return
 	}
-	err = nil
-	ret = string(this.buffer[idx:idx+str_len])
+	ret = string(bin)
 	return
 }
-
 
 func (this *ByteBuffer)Binary(idx uint32)(ret []byte,err error){
 	if idx + 4 > this.datasize {
 		err = ErrInvaildData
 		return
 	}
+	var bin_len uint32
 	//read bin len
-	bin_len,_ := this.Uint32(idx)
+	bin_len,err = this.Uint32(idx)
+	if err != nil {
+		return
+	}
 	idx += 4
 	if idx + bin_len > this.datasize {
 		err = ErrInvaildData

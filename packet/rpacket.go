@@ -20,7 +20,8 @@ func (this RPacket) Buffer()(*ByteBuffer){
 }
 
 func (this RPacket)Clone() (*Packet){
-	return (*Packet)(unsafe.Pointer(NewRPacket(this.buffer)))
+	rpk := &RPacket{readidx:this.readidx,buffer:this.buffer,Type:RPACKET}
+	return (*Packet)(unsafe.Pointer(rpk))
 }
 
 
