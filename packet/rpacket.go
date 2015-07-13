@@ -4,69 +4,69 @@ import "unsafe"
 
 type RPacket struct{
 	buffer *ByteBuffer
-	Type	byte
-	readidx uint32
+	tt	    byte
+	readIdx uint32
 }
 
 func NewRPacket(buffer *ByteBuffer)(*RPacket){
 	if buffer == nil {
 		return nil
 	}
-	return &RPacket{readidx:4,buffer:buffer,Type:RPACKET}
+	return &RPacket{readIdx:4,buffer:buffer,tt:RPACKET}
 }
 
 func (this RPacket) Buffer()(*ByteBuffer){
 	return this.buffer
 }
 
-func (this RPacket)Clone() (*Packet){
-	rpk := &RPacket{readidx:this.readidx,buffer:this.buffer,Type:RPACKET}
+func (this RPacket) Clone() (*Packet){
+	rpk := &RPacket{readIdx:this.readIdx,buffer:this.buffer,tt:RPACKET}
 	return (*Packet)(unsafe.Pointer(rpk))
 }
 
 
-func (this RPacket)MakeWrite()(*Packet){
+func (this RPacket) MakeWrite()(*Packet){
 	return this.Clone()
 }
 
-func (this RPacket)MakeRead()(*Packet){
+func (this RPacket) MakeRead()(*Packet){
 	return (*Packet)(unsafe.Pointer(NewWPacket(this.buffer)))
 }
 
 func (this *RPacket) Uint16()(uint16,error){
-	value,err := this.buffer.Uint16(this.readidx)
+	value,err := this.buffer.Uint16(this.readIdx)
 	if err != nil {
 		return 0,err
 	}
-	this.readidx += 2
+	this.readIdx += 2
 	return value,nil
 }
 
 func (this *RPacket) Uint32()(uint32,error){
-	value,err := this.buffer.Uint32(this.readidx)
+	value,err := this.buffer.Uint32(this.readIdx)
 	if err != nil {
 		return 0,err
 	}
-	this.readidx += 4
+	this.readIdx += 4
 	return value,nil
 }
 
 func (this *RPacket) String()(string,error){
-	value,err := this.buffer.String(this.readidx)
+	value,err := this.buffer.String(this.readIdx)
 	if err != nil {
 		return "",err
 	}
-	this.readidx += (4 + (uint32)(len(value)))
+	this.readIdx += (4 + (uint32)(len(value)))
 	return value,nil
 
 }
 
 func (this *RPacket) Binary()([]byte,error){
-	value,err := this.buffer.Binary(this.readidx)
+	value,err := this.buffer.Binary(this.readIdx)
 	if err != nil {
 		return nil,err
 	}
-	this.readidx += (4 + (uint32)(len(value)))
+	this.readIdx += (4 + (uint32)(len(value)))
 	return value,nil
 }
 
@@ -89,5 +89,5 @@ func (this RPacket) PkLen()(uint32){
 }
 
 func (this RPacket) GetType()(byte){
-	return this.Type
+	return this.tt
 }

@@ -92,7 +92,7 @@ func NewTcpSession(conn net.Conn)(*Tcpsession){
 	return session
 }
 
-func (this *Tcpsession)Send(wpk packet.Packet)(error){
+func (this *Tcpsession) Send(wpk packet.Packet)(error){
 	if this.socket_close{
 		return ErrSocketClose
 	}
@@ -116,7 +116,7 @@ func (this *Tcpsession)Send(wpk packet.Packet)(error){
 	return nil
 }
 
-func (this *Tcpsession)Close(){
+func (this *Tcpsession) Close(){
 	if this.socket_close{
 		return
 	}

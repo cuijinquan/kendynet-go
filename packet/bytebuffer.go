@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 )
+
 func IsPow2(size uint32) bool{
 	return (size&(size-1)) == 0
 }
@@ -50,6 +51,7 @@ var (
 	ErrInvaildData              = fmt.Errorf("bytebuffer: Invaild Data")
 )
 
+
 func NewBufferByBytes(bytes []byte,datasize uint32)(*ByteBuffer){
 	return &ByteBuffer{buffer:bytes,datasize:datasize,capacity:(uint32)(cap(bytes))}
 }
@@ -64,25 +66,25 @@ func NewByteBuffer(size uint32)(*ByteBuffer){
 	return &ByteBuffer{buffer:make([]byte,size),datasize:0,capacity:size}
 }
 
-func (this *ByteBuffer)Clone() (*ByteBuffer){
+func (this *ByteBuffer) Clone() (*ByteBuffer){
 	b := make([]byte,this.capacity)
 	copy(b[0:],this.buffer[:this.capacity])
 	return &ByteBuffer{buffer:b,datasize:this.datasize,capacity:this.capacity}
 }
 
-func (this *ByteBuffer)Bytes()([]byte){
+func (this *ByteBuffer) Bytes()([]byte){
 	return this.buffer
 }
 
-func (this *ByteBuffer)Len()(uint32){
+func (this *ByteBuffer) Len()(uint32){
 	return this.datasize
 }
 
-func (this *ByteBuffer)Cap()(uint32){
+func (this *ByteBuffer) Cap()(uint32){
 	return this.capacity
 }
 
-func (this *ByteBuffer)expand(newsize uint32)(error){
+func (this *ByteBuffer) expand(newsize uint32)(error){
 	newsize = SizeofPow2(newsize)
 	if newsize > Max_bufsize {
 		return ErrMaxDataSlotsExceeded
@@ -97,7 +99,7 @@ func (this *ByteBuffer)expand(newsize uint32)(error){
 	return nil
 }
 
-func (this *ByteBuffer)buffer_check(idx,size uint32)(error){
+func (this *ByteBuffer) buffer_check(idx,size uint32)(error){
 	if idx+size > this.capacity {
 		err := this.expand(idx+size)
 		if err != nil {
@@ -107,11 +109,11 @@ func (this *ByteBuffer)buffer_check(idx,size uint32)(error){
 	return nil
 }
 
-func (this *ByteBuffer)SetByte(idx uint32,value byte){
+func (this *ByteBuffer) SetByte(idx uint32,value byte){
 	this.buffer[idx] = value
 }
 
-func (this *ByteBuffer)PutByte(idx uint32,value byte)(error){
+func (this *ByteBuffer) PutByte(idx uint32,value byte)(error){
 	err := this.buffer_check(idx,1)
 	if err != nil {
 		return err
@@ -121,36 +123,36 @@ func (this *ByteBuffer)PutByte(idx uint32,value byte)(error){
 	return nil
 }
 
-func (this *ByteBuffer)SetUint16(idx uint32,value uint16){
-	binary.LittleEndian.PutUint16(this.buffer[idx:idx+2],value)
+func (this *ByteBuffer) SetUint16(idx uint32,value uint16) {
+	binary.BigEndian.PutUint16(this.buffer[idx:idx+2],value)
 }
 
-func (this *ByteBuffer)PutUint16(idx uint32,value uint16)(error){
+func (this *ByteBuffer) PutUint16(idx uint32,value uint16)(error){
 	err := this.buffer_check(idx,2)
 	if err != nil {
 		return err
 	}
-	binary.LittleEndian.PutUint16(this.buffer[idx:idx+2],value)
+	binary.BigEndian.PutUint16(this.buffer[idx:idx+2],value)
 	this.datasize += 2
 	return nil
 }
 
-func (this *ByteBuffer)SetUint32(idx uint32,value uint32){
-	binary.LittleEndian.PutUint32(this.buffer[idx:idx+4],value)
+func (this *ByteBuffer) SetUint32(idx uint32,value uint32){
+	binary.BigEndian.PutUint32(this.buffer[idx:idx+4],value)
 }
 
-func (this *ByteBuffer)PutUint32(idx uint32,value uint32)(error){
+func (this *ByteBuffer) PutUint32(idx uint32,value uint32)(error){
 	err := this.buffer_check(idx,4)//(uint32)(unsafe.Sizeof(value)))
 	if err != nil {
 		return err
 	}
-	binary.LittleEndian.PutUint32(this.buffer[idx:idx+4],value)
+	binary.BigEndian.PutUint32(this.buffer[idx:idx+4],value)
 	this.datasize += 4
 	return nil
 }
 
 
-func (this *ByteBuffer)PutString(idx uint32,value string)(error){
+func (this *ByteBuffer) PutString(idx uint32,value string)(error){
 	sizeneed := (uint32)(4)
 	sizeneed += (uint32)(len(value))
 	err := this.buffer_check(idx,sizeneed)
@@ -168,7 +170,7 @@ func (this *ByteBuffer)PutString(idx uint32,value string)(error){
 	return nil
 }
 
-func (this *ByteBuffer)PutBinary(idx uint32,value []byte)(error){
+func (this *ByteBuffer) PutBinary(idx uint32,value []byte)(error){
 	sizeneed := (uint32)(4)
 	sizeneed += (uint32)(len(value))
 	err := this.buffer_check(idx,sizeneed)
@@ -185,7 +187,7 @@ func (this *ByteBuffer)PutBinary(idx uint32,value []byte)(error){
 	return nil
 }
 
-func (this *ByteBuffer)PutRawBinary(value []byte)(error){
+func (this *ByteBuffer) PutRawBinary(value []byte)(error){
 	sizeneed := (uint32)(len(value))
 	err := this.buffer_check(uint32(this.datasize),sizeneed)
 	if err != nil {
@@ -197,29 +199,29 @@ func (this *ByteBuffer)PutRawBinary(value []byte)(error){
 	return nil
 }
 
-func (this *ByteBuffer)Uint16(idx uint32)(ret uint16,err error){
+func (this *ByteBuffer) Uint16(idx uint32)(ret uint16,err error){
 	if idx + 2 > this.datasize {
 		ret = 0
 		err = ErrInvaildData
 		return
 	}
-	ret = binary.LittleEndian.Uint16(this.buffer[idx:idx+2])
+	ret = binary.BigEndian.Uint16(this.buffer[idx:idx+2])
 	err = nil
 	return
 }
 
-func (this *ByteBuffer)Uint32(idx uint32)(ret uint32,err error){
+func (this *ByteBuffer) Uint32(idx uint32)(ret uint32,err error){
 	if idx + 4 > this.datasize {
 		ret = 0
 		err = ErrInvaildData
 		return
 	}
-	ret = binary.LittleEndian.Uint32(this.buffer[idx:idx+4])
+	ret = binary.BigEndian.Uint32(this.buffer[idx:idx+4])
 	err = nil
 	return
 }
 
-func (this *ByteBuffer)String(idx uint32)(ret string,err error){
+func (this *ByteBuffer) String(idx uint32)(ret string,err error){
 	if idx + 4 > this.datasize {
 		err = ErrInvaildData
 		return
@@ -233,7 +235,7 @@ func (this *ByteBuffer)String(idx uint32)(ret string,err error){
 	return
 }
 
-func (this *ByteBuffer)Binary(idx uint32)(ret []byte,err error){
+func (this *ByteBuffer) Binary(idx uint32)(ret []byte,err error){
 	if idx + 4 > this.datasize {
 		err = ErrInvaildData
 		return

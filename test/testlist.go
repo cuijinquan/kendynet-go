@@ -3,6 +3,7 @@ package main
 import util "kendynet-go/util"
 import "fmt"
 import "unsafe"
+import "encoding/binary"
 
 type Node struct{
 	util.ListNode
@@ -30,6 +31,13 @@ func main(){
 	fmt.Printf("%d\n",Cast2Node(list.Pop()).Value)
 
 	fmt.Printf("%d\n",list.Len())
+
+
+	header := uint32(0)
+	ptr    := ([]byte)(unsafe.Pointer(&header))
+	binary.LittleEndian.PutUint16(ptr[:],100)
+
+	fmt.Printf("%d\n",header)
 
 }
 

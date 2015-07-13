@@ -24,8 +24,8 @@ func NewRPacketDecoder(maxpacket uint32)(RPacketDecoder){
 	return RPacketDecoder{maxpacket:maxpacket}
 }
 
-func (this RPacketDecoder)DoRecv(Conn net.Conn)(Packet,error){
-	header := make([]byte,4)
+func (this RPacketDecoder) DoRecv(Conn net.Conn)(Packet,error){
+	header := []byte{0,0,0,0}
 	n, err := io.ReadFull(Conn, header)
 	if n == 0 && err == io.EOF {
 		return nil,ErrEOF
@@ -54,7 +54,7 @@ func NewRawDecoder()(RawDecoder){
 	return RawDecoder{}
 }
 
-func (this RawDecoder)DoRecv(Conn net.Conn)(Packet,error){
+func (this RawDecoder) DoRecv(Conn net.Conn)(Packet,error){
 	buff  := make([]byte,4096)
 	n,err := Conn.Read(buff)
 	if n == 0 && err == io.EOF {

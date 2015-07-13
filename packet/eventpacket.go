@@ -1,27 +1,27 @@
 package packet
 
 type EventPacket struct{
-	Type	byte
+	tt	    byte
 	errno	error
 }
 
 func NewEventPacket(errno error)(EventPacket){
-	return EventPacket{errno:errno,Type:EPACKET}
+	return EventPacket{errno:errno,tt:EPACKET}
 }
 
 func (this EventPacket) Buffer()(*ByteBuffer){
 	return nil
 }
 
-func (this EventPacket)Clone() (*Packet){
+func (this EventPacket) Clone() (*Packet){
 	return nil
 }
 
-func (this EventPacket)MakeWrite()(*Packet){
+func (this EventPacket) MakeWrite()(*Packet){
 	return nil
 }
 
-func (this EventPacket)MakeRead()(*Packet){
+func (this EventPacket) MakeRead()(*Packet){
 	return nil
 }
 
@@ -34,7 +34,7 @@ func (this EventPacket) PkLen()(uint32){
 }
 
 func (this EventPacket) GetType()(byte){
-	return this.Type
+	return this.tt
 }
 
 func (this EventPacket) GetError()(error){
