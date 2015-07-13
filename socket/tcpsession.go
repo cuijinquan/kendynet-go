@@ -1,4 +1,4 @@
-package tcpsession
+package socket
 
 import(
 	   "net"

@@ -7,7 +7,7 @@ package main
 
 import(
 	"net"
-	tcpsession "kendynet-go/tcpsession"
+	socket "kendynet-go/socket"
 	packet "kendynet-go/packet"
 	"fmt"
 	"strings"
@@ -30,7 +30,7 @@ type transfer_session struct{
 	ridx        int
 }
 
-func (this *transfer_session)send_file(session *tcpsession.Tcpsession){
+func (this *transfer_session)send_file(session *socket.Tcpsession){
 	for{
 		remain := len(this.filecontent) - this.ridx
 		sendsize := 0
@@ -53,7 +53,7 @@ func (this *transfer_session)send_file(session *tcpsession.Tcpsession){
 	}
 }
 
-func process_client(session *tcpsession.Tcpsession,p packet.Packet,_ error){
+func process_client(session *socket.Tcpsession,p packet.Packet,_ error){
 	rpk := p.(packet.RPacket)
 	cmd,_ := rpk.Uint16()
 	if cmd == request_file {
@@ -144,9 +144,9 @@ func main(){
 		if err != nil {
 			continue
 		}
-		session := tcpsession.NewTcpSession(conn)
+		session := socket.NewTcpSession(conn)
 		fmt.Printf("a client comming\n")
-		go tcpsession.ProcessSession(session,packet.NewRPacketDecoder(4096),process_client)
+		go socket.ProcessSession(session,packet.NewRPacketDecoder(4096),process_client)
 	}
 }
 

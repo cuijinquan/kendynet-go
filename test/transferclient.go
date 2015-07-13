@@ -7,7 +7,7 @@ package main
 
 import(
 	"net"
-	tcpsession "kendynet-go/tcpsession"
+	socket "kendynet-go/socket"
 	packet "kendynet-go/packet"
 	"fmt"
 	"io/ioutil"
@@ -38,7 +38,7 @@ func (this *transfer_session)recv_file(rpk packet.RPacket)(bool){
 	return false
 }
 
-func process_client(session *tcpsession.Tcpsession,p packet.Packet,_ error){
+func process_client(session *socket.Tcpsession,p packet.Packet,_ error){
 	rpk := p.(packet.RPacket)
 	cmd,_ := rpk.Uint16()
 	if cmd == file_size {
@@ -88,7 +88,7 @@ func main(){
 	if err != nil {
 		fmt.Printf("DialTcp error,%s\n",err)
 	}else{
-		session := tcpsession.NewTcpSession(conn)
+		session := socket.NewTcpSession(conn)
 		fmt.Printf("connect sucessful\n")
 		//发出文件请求
 		wpk := packet.NewWPacket(packet.NewByteBuffer(64))
@@ -97,7 +97,7 @@ func main(){
 		session.Send(wpk)
 		tsession := &transfer_session{filename:os.Args[2]}
 		session.SetUd(tsession)	
-		tcpsession.ProcessSession(session,packet.NewRPacketDecoder(65535),process_client)
+		socket.ProcessSession(session,packet.NewRPacketDecoder(65535),process_client)
 	}
 }
 
