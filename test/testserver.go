@@ -24,10 +24,11 @@ func main(){
 		}
 		session := tcpsession.NewTcpSession(conn)
 		fmt.Printf("a client comming\n")
+		session.SetRecvTimeout(5000)
 		go tcpsession.ProcessSession(session,packet.NewRawDecoder(),
 		   func (session *tcpsession.Tcpsession,rpk packet.Packet,errno error){	
 			if rpk == nil{
-				fmt.Printf("%s\n",errno)
+				fmt.Printf("error:%s\n",errno)
 				session.Close()
 				return
 			}

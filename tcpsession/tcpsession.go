@@ -4,6 +4,7 @@ import(
 	   "net"
 	   packet "kendynet-go/packet"
 	   "fmt"
+	   "time"
    )
 
 var (
@@ -19,6 +20,8 @@ type Tcpsession struct{
 	decoder      packet.Decoder
 	socket_close bool
 	ud           interface{}
+	recv_timeout uint64   //in ms
+	send_timeout uint64   //in ms
 }
 
 func (this *Tcpsession) SetUd(ud interface{}){
@@ -29,8 +32,20 @@ func (this *Tcpsession) Ud()(interface{}){
 	return this.ud
 }
 
+func (this *Tcpsession) SetRecvTimeout(timeout uint64){
+	this.recv_timeout = timeout
+}
+
+func (this *Tcpsession) SetSendTimeout(timeout uint64){
+	this.send_timeout = timeout
+}
+
 func dorecv(session *Tcpsession){
 	for{
+		if session.recv_timeout > 0 {
+			t := time.Now()
+			session.Conn.SetReadDeadline(t.Add(time.Millisecond * time.Duration(session.recv_timeout)))
+		}
 		p,err := session.decoder.DoRecv(session.Conn)
 		if session.socket_close{
 			break
@@ -85,9 +100,13 @@ func (this *Tcpsession)Send(wpk packet.Packet)(error){
 	for{
 		buff  := wpk.Buffer().Bytes()
 		end   := wpk.PkLen()
+		if this.send_timeout > 0 {
+			t := time.Now()
+			this.Conn.SetWriteDeadline(t.Add(time.Millisecond * time.Duration(this.send_timeout)))
+		}		
 		n,err := this.Conn.Write(buff[idx:end])
 		if err != nil || n < 0 {
-			return ErrSendClose
+			return err
 		}
 		idx += (uint32)(n)
 		if idx >= (uint32)(end){
