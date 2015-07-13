@@ -13,6 +13,7 @@ import(
 func main(){
 
 	clientcount := int32(0)
+	bytescount  := int32(0)
 
 	service := ":8010"
 	tcpAddr,err := net.ResolveTCPAddr("tcp4", service)
@@ -26,7 +27,9 @@ func main(){
 
 	ticker := util.DurationTicker()
 	ticker.Start(1000,func (_ time.Time){
-		fmt.Printf("clientcount:%d\n",clientcount)
+		tmp := 	atomic.LoadInt32(&bytescount)
+		atomic.StoreInt32(&bytescount,0)
+		fmt.Printf("clientcount:%d,transrfer:%d mb/s\n",clientcount,tmp/1024/1024)
 		})
 
 	for {
@@ -37,7 +40,7 @@ func main(){
 		session := socket.NewTcpSession(conn)
 		atomic.AddInt32(&clientcount,1)
 		session.SetRecvTimeout(5000)
-		go socket.ProcessSession(session,packet.NewRawDecoder(),
+		go socket.ProcessSession(session,packet.NewRawDecoder(65535),
 		   func (session *socket.Tcpsession,rpk packet.Packet,errno error){	
 			if rpk == nil{
 				atomic.AddInt32(&clientcount,-1)
@@ -45,6 +48,7 @@ func main(){
 				session.Close()
 				return
 			}
+			atomic.AddInt32(&bytescount,int32(rpk.PkLen()))
 			session.Send(rpk)
 		   })
 	}

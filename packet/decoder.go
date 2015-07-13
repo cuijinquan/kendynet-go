@@ -48,14 +48,15 @@ func (this RPacketDecoder) DoRecv(Conn net.Conn)(Packet,error){
 }
 
 type RawDecoder struct{
+	buffsize uint32
 }
 
-func NewRawDecoder()(RawDecoder){
-	return RawDecoder{}
+func NewRawDecoder(buffsize uint32)(RawDecoder){
+	return RawDecoder{buffsize:buffsize}
 }
 
 func (this RawDecoder) DoRecv(Conn net.Conn)(Packet,error){
-	buff  := make([]byte,4096)
+	buff  := make([]byte,this.buffsize)
 	n,err := Conn.Read(buff)
 	if n == 0 && err == io.EOF {
 		return nil,ErrEOF
