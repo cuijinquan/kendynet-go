@@ -1,5 +1,5 @@
 package packet
-import "unsafe"
+
 
 
 type RPacket struct{
@@ -19,18 +19,18 @@ func (this RPacket) Buffer()(*ByteBuffer){
 	return this.buffer
 }
 
-func (this RPacket) Clone() (*Packet){
+func (this RPacket) Clone() (Packet){
 	rpk := &RPacket{readIdx:this.readIdx,buffer:this.buffer,tt:RPACKET}
-	return (*Packet)(unsafe.Pointer(rpk))
+	return *rpk
 }
 
 
-func (this RPacket) MakeWrite()(*Packet){
+func (this RPacket) MakeWrite()(Packet){
+	return *NewWPacket(this.buffer)
+}
+
+func (this RPacket) MakeRead()(Packet){
 	return this.Clone()
-}
-
-func (this RPacket) MakeRead()(*Packet){
-	return (*Packet)(unsafe.Pointer(NewWPacket(this.buffer)))
 }
 
 func (this *RPacket) Uint16()(uint16,error){

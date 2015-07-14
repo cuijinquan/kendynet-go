@@ -27,7 +27,7 @@ type transfer_session struct{
 	filesize    int
 }
 
-func (this *transfer_session)recv_file(rpk packet.RPacket)(bool){
+func (this *transfer_session)recv_file(rpk *packet.RPacket)(bool){
 	content,_ := rpk.Binary()
 	copy(this.filecontent[this.widx:],content[:])
 	this.widx += len(content)
@@ -39,7 +39,7 @@ func (this *transfer_session)recv_file(rpk packet.RPacket)(bool){
 }
 
 func process_client(session *socket.Tcpsession,p packet.Packet,_ error){
-	rpk := p.(packet.RPacket)
+	rpk := p.(*packet.RPacket)
 	cmd,_ := rpk.Uint16()
 	if cmd == file_size {
 		if session.Ud() == nil {

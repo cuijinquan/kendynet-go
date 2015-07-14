@@ -1,5 +1,5 @@
 package packet
-import "unsafe"
+
 	
 type WPacket struct{
 	buffer     *ByteBuffer
@@ -12,27 +12,28 @@ func NewWPacket(buffer *ByteBuffer)(*WPacket){
 	if buffer == nil {
 		return nil
 	}
-	buffer.PutUint32(0,0)
-	return &WPacket{writeIdx:4,buffer:buffer,tt:WPACKET,copyCreate:0}
+	if buffer.Len() != 0 {
+		return &WPacket{writeIdx:buffer.Len(),buffer:buffer,tt:WPACKET,copyCreate:1}
+	}else{
+		buffer.PutUint32(0,0)
+		return &WPacket{writeIdx:4,buffer:buffer,tt:WPACKET,copyCreate:0}
+	}
 }
 
-func (this WPacket) Buffer()(*ByteBuffer){
+func (this WPacket) Buffer()(*ByteBuffer) {
 	return this.buffer
 }
 
-func (this WPacket) Clone() (*Packet){
-	wpk := NewWPacket(this.buffer)
-	wpk.copyCreate = 1
-	return (*Packet)(unsafe.Pointer(wpk))
+func (this WPacket) Clone() (Packet) {
+	return *NewWPacket(this.buffer)
 }
 
-
-func (this WPacket) MakeWrite()(*Packet){
+func (this WPacket) MakeWrite() (Packet) {
 	return this.Clone()
 }
 
-func (this WPacket) MakeRead()(*Packet){
-	return (*Packet)(unsafe.Pointer(NewRPacket(this.buffer)))
+func (this WPacket) MakeRead() (Packet) {
+	return *NewRPacket(this.buffer)
 }
 
 func (this WPacket) copyOnWrite(){
@@ -42,7 +43,7 @@ func (this WPacket) copyOnWrite(){
 	}
 }
 
-func (this *WPacket) PutUint16(value uint16)(error){
+func (this *WPacket) PutUint16(value uint16)(error) {
 	if this.buffer == nil {
 		return ErrInvaildData
 	}

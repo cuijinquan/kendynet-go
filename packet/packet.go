@@ -8,9 +8,9 @@ const (
 )
 
 type Packet interface{
-	MakeWrite()(*Packet)
-	MakeRead() (*Packet)
-	Clone()    (*Packet)
+	MakeWrite()(Packet)
+	MakeRead() (Packet)
+	Clone()    (Packet)
 	PkLen()    (uint32)
 	DataLen()  (uint32)
 	Buffer()   (*ByteBuffer)

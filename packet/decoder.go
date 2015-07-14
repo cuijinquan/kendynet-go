@@ -25,14 +25,14 @@ func NewRPacketDecoder(maxpacket uint32)(RPacketDecoder){
 }
 
 func (this RPacketDecoder) DoRecv(Conn net.Conn)(Packet,error){
-	header := []byte{0,0,0,0}
+	header := make([]byte,4)
 	n, err := io.ReadFull(Conn, header)
 	if n == 0 && err == io.EOF {
 		return nil,ErrEOF
 	}else if err != nil {
 		return nil,err
 	}
-	size := binary.LittleEndian.Uint32(header)
+	size := binary.BigEndian.Uint32(header)
 	if size > this.maxpacket {
 		return nil,ErrPacketTooLarge
 	}

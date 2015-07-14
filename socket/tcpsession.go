@@ -26,6 +26,7 @@ type Tcpsession struct{
 	Send_que     chan packet.Packet
 	decoder      packet.Decoder
 	socket_close int32
+	send_close   int32
 	ud           interface{}
 	recv_timeout uint64   //in ms
 	send_timeout uint64   //in ms
@@ -82,12 +83,6 @@ func dosend(session *Tcpsession) {
 			}		
 			n,err := session.Conn.Write(buff[idx:end])
 			if err != nil {
-				if 0 == atomic.LoadInt32(&session.socket_close) {
-					session.Packet_que <- packet.NewEventPacket(err)
-				}else{
-					session.Packet_que <- SendClose
-					return
-				}
 				break
 			}
 			idx += (uint32)(n)
@@ -116,7 +111,10 @@ func ProcessSession(tcpsession *Tcpsession,decoder packet.Decoder,
 			break
 		}
 		if msg == SendClose || msg == RecvClose{
-			cc += 1
+			if msg == SendClose {
+				atomic.StoreInt32(&tcpsession.send_close,1)
+			}
+			cc++
 		}else if packet.EPACKET == msg.GetType(){
 			process_packet(tcpsession,nil,msg.(packet.EventPacket).GetError())
 		}else{
@@ -143,17 +141,20 @@ func NewTcpSession(conn net.Conn)(*Tcpsession){
 func (this *Tcpsession) Send(wpk packet.Packet)(error){
 	if 1 == atomic.LoadInt32(&this.socket_close) {
 		return ErrSocketClose
+	}else if 1 == atomic.LoadInt32(&this.send_close) {
+		return ErrSendClose
 	}
 	this.Send_que <- wpk
 	return nil
 }
 
-func (this *Tcpsession) Close(){
+func (this *Tcpsession) Close() bool {
 	if 1 == atomic.LoadInt32(&this.socket_close) {
-		return
+		return false
 	}
 	atomic.StoreInt32(&this.socket_close,1)
 	tcpconn := this.Conn.(*net.TCPConn)
 	tcpconn.CloseRead()
 	this.Send_que <- NotifyClose
+	return true
 }

@@ -54,7 +54,7 @@ func (this *transfer_session)send_file(session *socket.Tcpsession){
 }
 
 func process_client(session *socket.Tcpsession,p packet.Packet,_ error){
-	rpk := p.(packet.RPacket)
+	rpk := p.(*packet.RPacket)
 	cmd,_ := rpk.Uint16()
 	if cmd == request_file {
 		if session.Ud() != nil {

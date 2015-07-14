@@ -13,15 +13,15 @@ func (this EventPacket) Buffer()(*ByteBuffer){
 	return nil
 }
 
-func (this EventPacket) Clone() (*Packet){
+func (this EventPacket) Clone() (Packet){
 	return nil
 }
 
-func (this EventPacket) MakeWrite()(*Packet){
+func (this EventPacket) MakeWrite()(Packet){
 	return nil
 }
 
-func (this EventPacket) MakeRead()(*Packet){
+func (this EventPacket) MakeRead()(Packet){
 	return nil
 }
 
