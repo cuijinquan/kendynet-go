@@ -1,31 +1,88 @@
 package util
 
-const (
-	SET = 1
-	GET = 2
-	DEL = 3
-	ALL = 4
-)
+type op interface {
+	Do(map[interface{}]interface{})
+}
 
-type op struct {
-	tt      byte
+type opSet struct {
 	key     interface{}
 	val     interface{}
+}
+
+func (this *opSet) Do(m map[interface{}]interface{}) {
+	m[this.key] = this.val
+}
+
+type opGet struct {
+	key     interface{}
 	valOk   bool
-	retChan chan *op
-	all     map[interface{}]interface{}
+	ret		chan interface{}
+}
+
+func (this *opGet) Do(m map[interface{}]interface{}) {
+	var val interface{}
+	val,this.valOk = m[this.key] 
+	this.ret <- val
+}
+
+type opDel struct {
+	key     interface{}
+}
+
+func (this *opDel) Do(m map[interface{}]interface{}) {
+	delete(m,this.key)
+}
+
+type opAll struct {
+	ret		chan interface{}
+}
+
+func (this *opAll) Do(m map[interface{}]interface{}) {
+	_m := make(map[interface{}]interface{})
+	for k,v := range(m) {
+		_m[k] = v
+	}
+	this.ret <- _m
+}
+
+type opKeys struct {
+	ret chan interface{}
+}
+
+func (this *opKeys) Do(m map[interface{}]interface{}) {
+	keys := make([]interface{},len(m))
+	i := 0
+	for k,_ := range(m) {
+		keys[i] = k
+		i++ 
+	}
+	this.ret <- keys
+}
+
+type opVals struct {
+	ret chan interface{}
+}
+
+func (this *opVals) Do(m map[interface{}]interface{}) {
+	vals := make([]interface{},len(m))
+	i := 0
+	for _,v := range(m) {
+		vals[i] = v
+		i++
+	}
+	this.ret <- vals
 }
 
 
 type ConnCurrMap struct {
-	opChan  chan *op
+	opChan  chan op
 	m       map[interface{}]interface{}
 }
 
 
 func NewConnCurrMap() * ConnCurrMap {
 	m := new(ConnCurrMap)
-	m.opChan = make(chan *op,1024)
+	m.opChan = make(chan op,1024)
 	_map    := make(map[interface{}]interface{})
 	go func () {
 		for{
@@ -33,65 +90,73 @@ func NewConnCurrMap() * ConnCurrMap {
 			if !ok {
 				break
 			}
-			if _op.tt == GET {
-				_op.val,_op.valOk = _map[_op.key]
-				_op.retChan <- _op
-			}else if _op.tt == ALL {
-				_op.all = make(map[interface{}]interface{})
-				for k,v := range _map {
-					_op.all[k] = v
-				}
-				_op.retChan <- _op
-			}else if _op.tt == DEL{
-				delete(_map,_op.key)
-			}else{
-				_map[_op.key] = _op.val
-			}
+			_op.Do(_map)
 		}
 	}()
 	return m
 }
 
 func (this *ConnCurrMap) Set(key interface{},val interface{}) {
-	o := new(op)
-	o.tt  = SET
+	o := new(opSet)
 	o.key = key
 	o.val = val
 	this.opChan <- o
 }
 
 func (this *ConnCurrMap) Del(key interface{}) {
-	o := new(op)
-	o.tt  = DEL
+	o := new(opDel)
 	o.key = key
 	this.opChan <- o
 }
 
 func (this *ConnCurrMap) Get(key interface{}) (interface{},bool) {
-	o := new(op)
-	o.tt  = GET
+	o := new(opGet)
 	o.key = key
-	o.retChan = make(chan *op)
+	o.ret = make(chan interface{})
 	this.opChan <- o
-	ret,ok := <- o.retChan
-	close(o.retChan)
+	ret,ok := <- o.ret
+	close(o.ret)
 	if !ok {
 		return nil,false
 	}
-	return ret.val,ret.valOk
+	return ret,o.valOk
 }
 
 func (this *ConnCurrMap) All() map[interface{}]interface{} {
-	o := new(op)
-	o.tt  = ALL
-	o.retChan = make(chan *op)
+	o := new(opAll)
+	o.ret = make(chan interface{})
 	this.opChan <- o
-	ret,ok := <- o.retChan
-	close(o.retChan)
+	ret,ok := <- o.ret
+	close(o.ret)
 	if !ok {
 		return nil
 	}
-	return ret.all	
+	return ret.(map[interface{}]interface{})	
+}
+
+func (this *ConnCurrMap) Keys() []interface{} {
+	o := new(opKeys)
+	o.ret = make(chan interface{})
+	this.opChan <- o
+	ret,ok := <- o.ret
+	close(o.ret)
+	if !ok {
+		return nil
+	}
+	return ret.([]interface{})		
 } 
+
+
+func (this *ConnCurrMap) Vals() []interface{} {
+	o := new(opVals)
+	o.ret = make(chan interface{})
+	this.opChan <- o
+	ret,ok := <- o.ret
+	close(o.ret)
+	if !ok {
+		return nil
+	}
+	return ret.([]interface{})		
+}   
 
 

@@ -24,7 +24,7 @@ func main(){
 			wpk := packet.NewWPacket(packet.NewByteBuffer(uint32(64)))
 			wpk.PutUint32(uint32(i))
 			session.Send(wpk)
-			session.SetUd(i)	
+			idx := i	
 			go socket.ProcessSession(session,packet.NewRPacketDecoder(1024),
 				func (session *socket.Tcpsession,rpk packet.Packet,errno error){	
 					if rpk == nil{
@@ -34,7 +34,7 @@ func main(){
 					}
 					r  := rpk.(*packet.RPacket)
 					id,_:= r.Uint32()
-					if id == session.Ud().(uint32) {
+					if id == idx {
 						session.Send(r.MakeWrite())
 					}
 			})

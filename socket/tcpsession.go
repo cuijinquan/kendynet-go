@@ -52,7 +52,8 @@ func dorecv(session *Tcpsession){
 	for{
 		if session.recv_timeout > 0 {
 			t := time.Now()
-			session.Conn.SetReadDeadline(t.Add(time.Millisecond * time.Duration(session.recv_timeout)))
+			deadline := t.Add(time.Millisecond * time.Duration(session.recv_timeout))
+			session.Conn.SetReadDeadline(deadline)
 		}
 		p,err := session.decoder.DoRecv(session.Conn)
 		if 1 == atomic.LoadInt32(&session.socket_close) {
@@ -79,7 +80,8 @@ func dosend(session *Tcpsession) {
 			end   := wpk.PkLen()
 			if session.send_timeout > 0 {
 				t := time.Now()
-				session.Conn.SetWriteDeadline(t.Add(time.Millisecond * time.Duration(session.send_timeout)))
+				deadline := t.Add(time.Millisecond * time.Duration(session.send_timeout))
+				session.Conn.SetWriteDeadline(deadline)
 			}		
 			n,err := session.Conn.Write(buff[idx:end])
 			if err != nil {
@@ -115,13 +117,13 @@ func ProcessSession(tcpsession *Tcpsession,decoder packet.Decoder,
 				atomic.StoreInt32(&tcpsession.send_close,1)
 			}
 			cc++
+			if 2 == cc {
+				break
+			}			
 		}else if packet.EPACKET == msg.GetType(){
 			process_packet(tcpsession,nil,msg.(packet.EventPacket).GetError())
 		}else{
 			process_packet(tcpsession,msg,nil)
-		}
-		if 2 == cc {
-			break
 		}
 	}
 	close(tcpsession.Packet_que)

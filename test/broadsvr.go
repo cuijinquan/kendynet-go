@@ -51,12 +51,12 @@ func main(){
 				clients.Del(session)
 				return
 			}
-			for _,v := range(clients.All()) {
+			for _,v := range(clients.Vals()) {
 				atomic.AddInt32(&packetcount,int32(1))
 				wpk := rpk.MakeWrite()
 				v.(*socket.Tcpsession).Send(wpk)
 			}
-		   })
+		})
 	}
 }
 
