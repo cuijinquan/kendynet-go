@@ -5,6 +5,7 @@ import(
 	   packet "kendynet-go/packet"
 	   "fmt"
 	   "time"
+	   "sync/atomic"
    )
 
 var (
@@ -13,12 +14,18 @@ var (
 	ErrSocketClose     = fmt.Errorf("socket close")
 )
 
+var (
+	SendClose          = packet.NewEventPacket(fmt.Errorf("SendClose"))
+	RecvClose          = packet.NewEventPacket(fmt.Errorf("RecvClose"))
+	NotifyClose        = packet.NewEventPacket(fmt.Errorf("notifyClose"))
+)
 
 type Tcpsession struct{
 	Conn         net.Conn
 	Packet_que   chan packet.Packet
+	Send_que     chan packet.Packet
 	decoder      packet.Decoder
-	socket_close bool
+	socket_close int32
 	ud           interface{}
 	recv_timeout uint64   //in ms
 	send_timeout uint64   //in ms
@@ -47,7 +54,7 @@ func dorecv(session *Tcpsession){
 			session.Conn.SetReadDeadline(t.Add(time.Millisecond * time.Duration(session.recv_timeout)))
 		}
 		p,err := session.decoder.DoRecv(session.Conn)
-		if session.socket_close{
+		if 1 == atomic.LoadInt32(&session.socket_close) {
 			break
 		}
 		if err != nil {
@@ -56,70 +63,97 @@ func dorecv(session *Tcpsession){
 		}
 		session.Packet_que <- p	
 	}
-	close(session.Packet_que)
+	session.Packet_que <- RecvClose
+}
+
+func dosend(session *Tcpsession) {
+	for {
+		wpk,ok := <- session.Send_que
+		if !ok || wpk == NotifyClose {
+			break
+		}
+		idx := (uint32)(0)
+		for{
+			buff  := wpk.Buffer().Bytes()
+			end   := wpk.PkLen()
+			if session.send_timeout > 0 {
+				t := time.Now()
+				session.Conn.SetWriteDeadline(t.Add(time.Millisecond * time.Duration(session.send_timeout)))
+			}		
+			n,err := session.Conn.Write(buff[idx:end])
+			if err != nil {
+				if 0 == atomic.LoadInt32(&session.socket_close) {
+					session.Packet_que <- packet.NewEventPacket(err)
+				}else{
+					session.Packet_que <- SendClose
+					return
+				}
+				break
+			}
+			idx += (uint32)(n)
+			if idx >= (uint32)(end){
+				break
+			}
+		}
+	}
+	session.Packet_que <- SendClose
 }
 
 
 func ProcessSession(tcpsession *Tcpsession,decoder packet.Decoder,
-					process_packet func (*Tcpsession,packet.Packet,error))(error){
-	if tcpsession.socket_close{
+					process_packet func (*Tcpsession,packet.Packet,error))(error) {
+	if 1 == atomic.LoadInt32(&tcpsession.socket_close) {
 		return ErrSocketClose
 	}
 	tcpsession.decoder = decoder
 	go dorecv(tcpsession)
+	go dosend(tcpsession)
+	cc := 0
 	for{
 		msg,ok := <- tcpsession.Packet_que
 		if !ok {
 			//log error
-			return nil
+			break
 		}
-		if packet.EPACKET == msg.GetType(){
+		if msg == SendClose || msg == RecvClose{
+			cc += 1
+		}else if packet.EPACKET == msg.GetType(){
 			process_packet(tcpsession,nil,msg.(packet.EventPacket).GetError())
 		}else{
 			process_packet(tcpsession,msg,nil)
 		}
-		if tcpsession.socket_close{
-			return nil
+		if 2 == cc {
+			break
 		}
 	}
+	close(tcpsession.Packet_que)
+	close(tcpsession.Send_que)
+	tcpsession.Conn.Close()
+	return nil
 }
 
 func NewTcpSession(conn net.Conn)(*Tcpsession){
-	session := new(Tcpsession)
-	session.Conn = conn
-	session.Packet_que   = make(chan packet.Packet,1024)
-	session.socket_close = false
+	session 			:= new(Tcpsession)
+	session.Conn 		 = conn
+	session.Packet_que   = make(chan packet.Packet,64)
+	session.Send_que     = make(chan packet.Packet,64)
 	return session
 }
 
 func (this *Tcpsession) Send(wpk packet.Packet)(error){
-	if this.socket_close{
+	if 1 == atomic.LoadInt32(&this.socket_close) {
 		return ErrSocketClose
 	}
-	idx := (uint32)(0)
-	for{
-		buff  := wpk.Buffer().Bytes()
-		end   := wpk.PkLen()
-		if this.send_timeout > 0 {
-			t := time.Now()
-			this.Conn.SetWriteDeadline(t.Add(time.Millisecond * time.Duration(this.send_timeout)))
-		}		
-		n,err := this.Conn.Write(buff[idx:end])
-		if err != nil || n < 0 {
-			return err
-		}
-		idx += (uint32)(n)
-		if idx >= (uint32)(end){
-			break
-		}
-	}
+	this.Send_que <- wpk
 	return nil
 }
 
 func (this *Tcpsession) Close(){
-	if this.socket_close{
+	if 1 == atomic.LoadInt32(&this.socket_close) {
 		return
 	}
-	this.socket_close = true
-	this.Conn.Close()
+	atomic.StoreInt32(&this.socket_close,1)
+	tcpconn := this.Conn.(*net.TCPConn)
+	tcpconn.CloseRead()
+	this.Send_que <- NotifyClose
 }
