@@ -1,3 +1,4 @@
+//固定间隔定时器
 package util
 import "time"
 	

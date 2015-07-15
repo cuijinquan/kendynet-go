@@ -10,7 +10,7 @@ type WPacket struct{
 
 func NewWPacket(buffer *ByteBuffer)(*WPacket){
 	if buffer == nil {
-		return nil
+		buffer = NewByteBuffer(64)
 	}
 	if buffer.Len() != 0 {
 		return &WPacket{writeIdx:buffer.Len(),buffer:buffer,tt:WPACKET,copyCreate:1}

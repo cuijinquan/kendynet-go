@@ -8,9 +8,17 @@ type RawPacket struct{
 
 func NewRawPacket(buffer *ByteBuffer)(*RawPacket) {
 	if buffer == nil {
-		return nil
+		buffer = NewByteBuffer(64)
 	}
 	return &RawPacket{buffer:buffer,tt:RAWPACKET}
+}
+
+func (this *RawPacket) PutBinary(value []byte)(error){
+	err := this.buffer.PutBinary(this.buffer.Len(),value)
+	if err != nil{
+		return err
+	}
+	return nil
 }
 
 func (this RawPacket) Buffer()(*ByteBuffer) {

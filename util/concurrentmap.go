@@ -1,3 +1,4 @@
+//基于channel同步的一个concurrent map
 package util
 
 type op interface {
@@ -76,7 +77,6 @@ func (this *opVals) Do(m map[interface{}]interface{}) {
 
 type ConnCurrMap struct {
 	opChan  chan op
-	m       map[interface{}]interface{}
 }
 
 
@@ -158,5 +158,4 @@ func (this *ConnCurrMap) Vals() []interface{} {
 	}
 	return ret.([]interface{})		
 }   
-
 
