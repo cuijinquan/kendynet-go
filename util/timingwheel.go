@@ -186,7 +186,7 @@ func (this *WheelMgr) Register(timeout int64,now int64,
 	if timeout > MAX_TIMEOUT {
 		t.timeout = MAX_TIMEOUT
 	}else{
-		t.timeout = t.timeout
+		t.timeout = timeout
 	}
 	t.expire = now + t.timeout
 	if this.lasttime == 0 {
