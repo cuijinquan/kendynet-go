@@ -58,6 +58,7 @@ func cast2Timer(n *DListNode)(*Timer){
 }
 
 func (this *Timer) UnRegister() {
+	this.timeout = 0
 	if !this.incb {
 		cast2DListNode(this).Remove()
 	}
@@ -153,7 +154,11 @@ func (this *WheelMgr) fire(tick int64) {
 		t.incb = true
 		ret := t.callback(tick)
 		t.incb = false
-		if ret >= 0 {
+		/*
+			如果在callback中调用了Remove,timeout会被设置为0,
+			此时不管ret为什么值,都不会重新注册定时器
+		*/
+		if ret >= 0 && t.timeout > 0 {
 			if ret > 0 {
 				t.timeout = ret
 			}
