@@ -74,3 +74,13 @@ func (this *DList) PushFront(n *DListNode) {
 	next.Pre = n
 	n.owner = this	
 }
+
+func (this *DList) Move(src *DList) {
+	this.head.Next = src.head.Next
+	this.head.Next.Pre = &this.head
+	this.tail.Pre = src.tail.Pre
+	this.tail.Pre.Next = &this.tail;
+	//clear src
+	src.head.Next = &src.tail
+	src.tail.Pre  = &src.head
+}

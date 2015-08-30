@@ -21,19 +21,6 @@ func wheelsize(t byte) uint32 {
 	}
 }
 
-func precision(t byte) uint64 {
-	if t == wheel_sec {
-		return 1
-	}else if t == wheel_hour {
-		return 1000
-	}else if t == wheel_day {
-		return 3600
-	}else {
-		return 0
-	}	
-}
-
-
 type wheel struct {
 	tt    byte
 	cur   uint32
@@ -55,13 +42,6 @@ func cast2DListNode(t *Timer)(*DListNode){
 
 func cast2Timer(n *DListNode)(*Timer){
 	return ((*Timer)(unsafe.Pointer(n)))
-}
-
-func (this *Timer) UnRegister() {
-	this.timeout = 0
-	if !this.incb {
-		cast2DListNode(this).Remove()
-	}
 }
  
 type WheelMgr struct {
@@ -88,95 +68,85 @@ func TimingWheel() *WheelMgr {
 	return t
 }
 
-
-func (this *WheelMgr) add2Wheel(w *wheel,t *Timer,remain int64) {
-	var i uint32
-	slots := wheelsize(w.tt) - w.cur
-	if w.tt == wheel_day || slots > uint32(remain) {
-		i = (w.cur + uint32(remain))%(wheelsize(w.tt))
-		w.items[i].PushBack(cast2DListNode(t))			
-	}else {
-		remain -= int64(slots)
-		remain /= int64(wheelsize(w.tt))
-		this.add2Wheel(this.wheels[w.tt+1],t,remain)		
-	}
+func cal_remain(now int64,expire int64) int64 {
+	return expire - now
 }
 
-func (this *WheelMgr) reg(t *Timer,w *wheel,tick int64) {
-	if t.expire > tick {
-		if w == nil {
-			this.add2Wheel(this.wheels[wheel_sec],t,t.expire - tick)
-		}else{
-			this.add2Wheel(w,t,t.expire - tick)
-		}
-	}
-}
-
-//将本级超时的定时器推到下级时间轮中
-func (this *WheelMgr) down(t *Timer,w *wheel,tick int64) {
-	var remain int64
-	if t.expire >= tick {
-		remain = (t.expire - tick) - int64(wheelsize(w.tt-1))
-		remain /= int64(precision(w.tt))
-		w.items[w.cur + uint32(remain)].PushBack(cast2DListNode(t))		
-	}	
-}
-
-//处理上一级时间轮
-func (this *WheelMgr) tickup(w *wheel,tick int64) {
-	var t *Timer
-	items := w.items[w.cur]
-	for{
-		t = cast2Timer(items.Pop())
-		if t == nil {
-			break
-		}
-		this.down(t,this.wheels[w.tt-1],tick)
-	}
-	w.cur = (w.cur+1)%wheelsize(w.tt)
-	if w.cur == 0 && w.tt != wheel_day {
-		this.tickup(this.wheels[w.tt+1],tick)
-	}	
-}
-
-func (this *WheelMgr) fire(tick int64) {
-	w := this.wheels[wheel_sec]
-	w.cur = (w.cur+1)%wheelsize(wheel_sec)
-	if w.cur == 0 {
-		this.tickup(this.wheels[wheel_hour],tick)
-	}
-	items := w.items[w.cur]
+func (this *WheelMgr) reg(t *Timer,tick int64) {
+	var slot,wsize uint32
+	var w *wheel
+	wtype  := wheel_sec
+	remain := cal_remain(tick,t.expire)
 	for {
-		t := cast2Timer(items.Pop())
-		if t == nil {
-			break
-		}
-		t.incb = true
-		ret := t.callback(tick)
-		t.incb = false
-		/*
-			如果在callback中调用了Remove,timeout会被设置为0,
-			此时不管ret为什么值,都不会重新注册定时器
-		*/
-		if ret >= 0 && t.timeout > 0 {
-			if ret > 0 {
-				t.timeout = ret
+		w = this.wheels[wtype]
+		wsize = wheelsize(byte(wtype))
+		if wtype == wheel_day || int64(wsize) >= remain {
+			slot = w.cur + uint32(remain)
+			if slot >= wsize {
+				slot = slot - wsize
 			}
-			t.expire = tick + t.timeout
-			this.reg(t,nil,tick)
+			w.items[slot].PushBack(cast2DListNode(t))
+
+			break
+		} else {
+			remain--
+			remain = remain / int64(wsize)
+			wtype++
 		}
 	}
 }
+
+func (this *WheelMgr) fire(w *wheel,tick int64) {
+	w.cur++
+	if w.cur == wheelsize(w.tt) {
+		w.cur = 0
+	}
+	if !w.items[w.cur].Empty() {
+		tlist := NewDList()
+		tlist.Move(w.items[w.cur])
+		if w.tt == wheel_sec {
+			for {
+				t := cast2Timer(tlist.Pop())
+				if t == nil {
+					break
+				}
+				t.incb = true
+				ret := t.callback(tick)
+				t.incb = false
+				if ret >= 0 && t.timeout > 0 {
+					if ret > 0 {
+						t.timeout = ret
+					}
+					t.expire = tick + t.timeout
+					this.reg(t,tick)
+				}
+			}
+		} else {
+			for {
+				t := cast2Timer(tlist.Pop())
+				if t == nil {
+					break
+				}
+				this.reg(t,tick);
+			}
+		}
+	}
+
+	if w.cur + 1 == wheelsize(w.tt) && w.tt < wheel_day {
+		this.fire(this.wheels[w.tt + 1],tick)
+	}
+}
+
 
 func (this *WheelMgr) Tick(now int64) {
 	for{
 		if this.lasttime == now {
 			break
 		}
-		this.fire(this.lasttime)
 		this.lasttime++
+		this.fire(this.wheels[wheel_sec],this.lasttime)
 	}
-} 
+}
 
 func (this *WheelMgr) Register(timeout int64,now int64,
 							   callback func (int64) int64) *Timer {
@@ -190,13 +160,20 @@ func (this *WheelMgr) Register(timeout int64,now int64,
 	t.callback = callback
 	if timeout > MAX_TIMEOUT {
 		t.timeout = MAX_TIMEOUT
-	}else{
+	}else {
 		t.timeout = timeout
 	}
 	t.expire = now + t.timeout
 	if this.lasttime == 0 {
 		this.lasttime = now
 	}
-	this.reg(t,nil,this.lasttime)
+	this.reg(t,this.lasttime)
 	return t
+}
+
+func (this *Timer) UnRegister() {
+	this.timeout = 0
+	if !this.incb {
+		cast2DListNode(this).Remove()
+	}
 }

@@ -7,7 +7,6 @@ import(
 )
 
 func main(){
-	
 	timingwheel := util.TimingWheel()
 	timingwheel.Register(100,0,func (_ int64) int64 {
 		fmt.Printf("timeout\n")
